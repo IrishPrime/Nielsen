@@ -21,7 +21,7 @@ def load_config():
 	try:
 		CONFIG.read(first_config)
 	except:
-		logging.error("Failed to load config.")
+		logging.warning("Unable to load config.")
 
 
 def rename_file(path):
@@ -88,10 +88,11 @@ def main():
 	logging.basicConfig(filename="nielsen.log",
 		level=getattr(logging, CONFIG['DEFAULT']['LogLevel'], 30))
 
-	logging.debug("User: {0}, Group: {1}, Mode: {2}".format(
+	logging.debug("User: {0}, Group: {1}, Mode: {2}, LogLevel: {3}".format(
 		CONFIG['DEFAULT']['User'],
 		CONFIG['DEFAULT']['Group'],
-		CONFIG['DEFAULT']['Mode']))
+		CONFIG['DEFAULT']['Mode'],
+		CONFIG['DEFAULT']['LogLevel']))
 
 	# Iterate over files
 	for f in ARGS.files:
