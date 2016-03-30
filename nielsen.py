@@ -63,7 +63,7 @@ def main():
 	PARSER.add_argument("-m", "--mode", dest="mode", type=str,
 		help="File mode (permissions) in octal")
 	PARSER.add_argument("-l", "--log", dest="log_level", type=str,
-		default="WARNING", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+		choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
 		help="Logging level")
 	PARSER.add_argument("files", nargs="+", type=str, help="Files to operate on")
 	ARGS = PARSER.parse_args()
