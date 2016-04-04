@@ -12,6 +12,10 @@ from shutil import chown
 
 
 CONFIG = configparser.ConfigParser()
+CONFIG['DEFAULT'] = {'User': '',
+		'Group': '',
+		'Mode': '644',
+		'LogLevel': 'WARNING'}
 
 
 def load_config():
@@ -24,7 +28,7 @@ def load_config():
 		logging.warning("Unable to load config.")
 
 
-def rename_file(path):
+def clean_file_name(path):
 	"""Remove cruft from filenames.
 	Typical filenames are something like:
 		The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
@@ -32,26 +36,49 @@ def rename_file(path):
 		The Glades -02.01- Family Matters.avi
 	"""
 	logging.info("Processing %s" % path)
-	p = re.compile(r"(?P<series>.*) S(?P<season>\d+)E(?P<episode>\d+) (?P<title>.*?)?(?P<junk> HDTV.*?)? ?(?P<extension>\S{3,4})$")
+
+	p = re.compile(r"(?P<series>.*)\s+S?(?P<season>\d{2,})\s?E?(?P<episode>\d{2,})\s*(?P<title>.*)?\s+(?P<extension>\w+)$", re.IGNORECASE)
 	m = p.match(re.compile("\.").sub(" ", path))
 	if m:
+		series = m.group("series").strip()
+
+		# Use title case if everything is lowercase
+		if m.group("series").islower():
+			series = m.group("series").title()
+
+		# Strip tags and release notes from the episode title
+		tags = re.compile(r"(HDTV|720p|WEB|PROPER|REPACK|RERIP).*", re.IGNORECASE)
+		title = re.sub(tags, "", m.group("title")).strip()
+
+		# Use title case if everything is lowercase
+		if title.islower():
+			title = title.title()
+
 		clean = "{0} -{1}.{2}- {3}.{4}".format(
-			m.group("series"),
-			m.group("season"),
-			m.group("episode"),
-			m.group("title"),
-			m.group("extension"))
-		logging.info("Moving to: {0}".format(clean))
-		rename(path, clean)
+			series,
+			m.group("season").strip(),
+			m.group("episode").strip(),
+			title,
+			m.group("extension").strip())
+		logging.info("Change to: {0}".format(clean))
+		return clean
 	else:
 		logging.info("{0} did not match pattern, skipping.".format(path))
+		return None
 
 
 def process_file(path):
 	"""Set ownership and permissions for files, then rename."""
-	chown(path, CONFIG['DEFAULT']['User'], CONFIG['DEFAULT']['Group'])
-	chmod(path, int(CONFIG['DEFAULT']['Mode'], 8))
-	rename_file(path)
+	if CONFIG['Options']['User'] or CONFIG['Options']['Group']:
+		chown(path, CONFIG['Options']['User'] or None,
+			CONFIG['Options']['Group'] or None)
+
+	if CONFIG['Options']['Mode']:
+		chmod(path, int(CONFIG['Options']['Mode'], 8))
+
+	clean = clean_file_name(path)
+	if clean:
+		rename(path, clean)
 
 
 def main():
@@ -73,26 +100,26 @@ def main():
 
 	# Override the settings in the config file if given on the command line
 	if ARGS.user:
-		CONFIG['DEFAULT']['User'] = ARGS.user
+		CONFIG['Options']['User'] = ARGS.user
 
 	if ARGS.group:
-		CONFIG['DEFAULT']['Group'] = ARGS.group
+		CONFIG['Options']['Group'] = ARGS.group
 
 	if ARGS.mode:
-		CONFIG['DEFAULT']['Mode'] = ARGS.mode
+		CONFIG['Options']['Mode'] = ARGS.mode
 
 	if ARGS.log_level:
-		CONFIG['DEFAULT']['LogLevel'] = ARGS.log_level.upper()
+		CONFIG['Options']['LogLevel'] = ARGS.log_level.upper()
 
 	# Validate the log level
 	logging.basicConfig(filename="nielsen.log",
-		level=getattr(logging, CONFIG['DEFAULT']['LogLevel'], 30))
+		level=getattr(logging, CONFIG['Options']['LogLevel'], 30))
 
-	logging.debug("User: {0}, Group: {1}, Mode: {2}, LogLevel: {3}".format(
-		CONFIG['DEFAULT']['User'],
-		CONFIG['DEFAULT']['Group'],
-		CONFIG['DEFAULT']['Mode'],
-		CONFIG['DEFAULT']['LogLevel']))
+	logging.debug("User: '{0}', Group: '{1}', Mode: '{2}', LogLevel: '{3}'".format(
+		CONFIG['Options']['User'],
+		CONFIG['Options']['Group'],
+		CONFIG['Options']['Mode'],
+		CONFIG['Options']['LogLevel']))
 
 	# Iterate over files
 	for f in ARGS.files:
