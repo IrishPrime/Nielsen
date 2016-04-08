@@ -7,15 +7,17 @@ import configparser
 import logging
 import re
 import xdg.BaseDirectory
-from os import chmod, rename
-from shutil import chown
+from os import chmod, makedirs, path, rename
+from shutil import chown, move
 
 
 CONFIG = configparser.ConfigParser()
 CONFIG['DEFAULT'] = {'User': '',
 		'Group': '',
 		'Mode': '644',
-		'LogLevel': 'WARNING'}
+		'LogLevel': 'WARNING',
+		'MediaPath': '',
+		'OrganizeFiles': 'False'}
 
 
 def load_config():
@@ -28,23 +30,30 @@ def load_config():
 		logging.warning("Unable to load config.")
 
 
-def clean_file_name(path):
-	"""Remove cruft from filenames.
+def get_file_info(filename):
+	"""Get information about an episode from its filename.
+	Returns a dictionary with the following keys:
+		- series: Series name
+		- season: Season number
+		- episode: Episode number
+		- title: Episode title (if found)
+		- extension: File extension
 	Typical filenames are something like:
 		The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
-	We want:
-		The Glades -02.01- Family Matters.avi
 	"""
-	logging.info("Processing %s" % path)
+	logging.info("Processing %s" % filename)
 
 	p = re.compile(r"(?P<series>.*)\s+S?(?P<season>\d{2,})\s?E?(?P<episode>\d{2,})\s*(?P<title>.*)?\s+(?P<extension>\w+)$", re.IGNORECASE)
-	m = p.match(re.compile("\.").sub(" ", path))
+	m = p.match(re.compile("\.").sub(" ", filename))
 	if m:
 		series = m.group("series").strip()
 
 		# Use title case if everything is lowercase
 		if m.group("series").islower():
 			series = m.group("series").title()
+
+		# Check series name against filter
+		# series = filter_series(series)
 
 		# Strip tags and release notes from the episode title
 		tags = re.compile(r"(HDTV|720p|WEB|PROPER|REPACK|RERIP).*", re.IGNORECASE)
@@ -54,31 +63,62 @@ def clean_file_name(path):
 		if title.islower():
 			title = title.title()
 
-		clean = "{0} -{1}.{2}- {3}.{4}".format(
-			series,
-			m.group("season").strip(),
-			m.group("episode").strip(),
-			title,
-			m.group("extension").strip())
-		logging.info("Change to: {0}".format(clean))
-		return clean
+		info = {
+			'series': series,
+			'season': m.group('season').strip(),
+			'episode': m.group('episode').strip(),
+			'title': title,
+			'extension': m.group('extension').strip()
+		}
+
+		logging.info('Series: {0}'.format(info['series']))
+		logging.info('Season: {0}'.format(info['season']))
+		logging.info('Episode: {0}'.format(info['episode']))
+		logging.info('Title: {0}'.format(info['title']))
+		logging.info('Extension: {0}'.format(info['extension']))
+
+		return info
 	else:
-		logging.info("{0} did not match pattern, skipping.".format(path))
+		logging.info("{0} did not match pattern, skipping.".format(filename))
 		return None
 
 
-def process_file(path):
+def organize_file(filename, series, season):
+	"""Move files to <MediaPath>/<Series>/Season <Season>."""
+	if CONFIG['Options']['MediaPath']:
+		new_path = path.join(CONFIG['Options']['MediaPath'], series,
+			"Season {0}".format(season))
+		logging.debug("Creating and/or moving to: {0}".format(new_path))
+		makedirs(new_path, exist_ok=True)
+		move(filename, new_path)
+		return new_path
+	else:
+		logging.error("No MediaPath defined.")
+		return None
+
+
+def process_file(filename):
 	"""Set ownership and permissions for files, then rename."""
 	if CONFIG['Options']['User'] or CONFIG['Options']['Group']:
-		chown(path, CONFIG['Options']['User'] or None,
+		chown(filename, CONFIG['Options']['User'] or None,
 			CONFIG['Options']['Group'] or None)
 
 	if CONFIG['Options']['Mode']:
-		chmod(path, int(CONFIG['Options']['Mode'], 8))
+		chmod(filename, int(CONFIG['Options']['Mode'], 8))
 
-	clean = clean_file_name(path)
-	if clean:
-		rename(path, clean)
+	info = get_file_info(filename)
+	if info:
+		clean = "{0} -{1}.{2}- {3}.{4}".format(
+			info['series'],
+			info['season'],
+			info['episode'],
+			info['title'],
+			info['extension'])
+		logging.info("Rename to: {0}".format(clean))
+		rename(filename, clean)
+
+		if CONFIG.getboolean('Options', 'OrganizeFiles'):
+			organize_file(clean, info['series'], info['season'])
 
 
 def main():
