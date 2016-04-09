@@ -28,6 +28,7 @@ def load_config():
 		CONFIG.read(first_config)
 	except:
 		logging.warning("Unable to load config.")
+		CONFIG['Options'] = {}
 
 
 def get_file_info(filename):
