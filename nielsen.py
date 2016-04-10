@@ -42,7 +42,6 @@ def get_file_info(filename):
 	Typical filenames are something like:
 		The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
 	"""
-	logging.info("Processing %s" % filename)
 
 	p = re.compile(r"(?P<series>.*)\s+S?(?P<season>\d{2,})\s?E?(?P<episode>\d{2,})\s*(?P<title>.*)?\s+(?P<extension>\w+)$", re.IGNORECASE)
 	m = p.match(re.compile("\.").sub(" ", filename))
@@ -91,7 +90,10 @@ def organize_file(filename, series, season):
 			"Season {0}".format(season))
 		logging.debug("Creating and/or moving to: {0}".format(new_path))
 		makedirs(new_path, exist_ok=True)
-		move(filename, new_path)
+		try:
+			move(filename, new_path)
+		except Exception as err:
+			logging.error(err)
 		return new_path
 	else:
 		logging.error("No MediaPath defined.")
@@ -100,12 +102,20 @@ def organize_file(filename, series, season):
 
 def process_file(filename):
 	"""Set ownership and permissions for files, then rename."""
+	logging.info("Processing %s" % filename)
+
 	if CONFIG['Options']['User'] or CONFIG['Options']['Group']:
-		chown(filename, CONFIG['Options']['User'] or None,
-			CONFIG['Options']['Group'] or None)
+		try:
+			chown(filename, CONFIG['Options']['User'] or None,
+				CONFIG['Options']['Group'] or None)
+		except PermissionError as err:
+			logging.error("chown failed. {0}".format(err))
 
 	if CONFIG['Options']['Mode']:
-		chmod(filename, int(CONFIG['Options']['Mode'], 8))
+		try:
+			chmod(filename, int(CONFIG['Options']['Mode'], 8))
+		except PermissionError as err:
+			logging.error("chmod failed. {0}".format(err))
 
 	info = get_file_info(filename)
 	if info:
@@ -164,7 +174,6 @@ def main():
 
 	# Iterate over files
 	for f in ARGS.files:
-		logging.info(f)
 		process_file(f)
 
 
