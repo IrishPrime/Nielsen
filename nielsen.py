@@ -20,14 +20,18 @@ CONFIG['DEFAULT'] = {'User': '',
 		'OrganizeFiles': 'False'}
 
 
-def load_config():
-	"""Check XDG directories for configuration file."""
-	first_config = xdg.BaseDirectory.load_first_config("nielsen/nielsen.ini")
+def load_config(filename=None):
+	"""Load config file specified by path, or check XDG directories for
+	configuration file."""
+	if filename and path.isfile(filename):
+		config = filename
+	else:
+		config = xdg.BaseDirectory.load_first_config("nielsen/nielsen.ini")
 
 	try:
-		CONFIG.read(first_config)
+		CONFIG.read(config)
 	except:
-		logging.warning("Unable to load config.")
+		logging.warning("Unable to load config: '{0}'".format(config))
 		CONFIG['Options'] = {}
 
 
@@ -150,11 +154,12 @@ def main():
 	PARSER.add_argument("-l", "--log", dest="log_level", type=str,
 		choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
 		help="Logging level")
+	PARSER.add_argument("-c", "--config", dest="configfile", help="Config file")
 	PARSER.add_argument("files", nargs="+", type=str, help="Files to operate on")
 	ARGS = PARSER.parse_args()
 
 	# Load XDG configuration file
-	load_config()
+	load_config(ARGS.configfile)
 
 	# Override the settings in the config file if given on the command line
 	if ARGS.user:
