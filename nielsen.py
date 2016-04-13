@@ -71,15 +71,15 @@ def get_file_info(filename):
 			'extension': m.group('extension').strip()
 		}
 
-		logging.info('Series: {0}'.format(info['series']))
-		logging.info('Season: {0}'.format(info['season']))
-		logging.info('Episode: {0}'.format(info['episode']))
-		logging.info('Title: {0}'.format(info['title']))
-		logging.info('Extension: {0}'.format(info['extension']))
+		logging.info("Series: '{0}'".format(info['series']))
+		logging.info("Season: '{0}'".format(info['season']))
+		logging.info("Episode: '{0}'".format(info['episode']))
+		logging.info("Title: '{0}'".format(info['title']))
+		logging.info("Extension: '{0}'".format(info['extension']))
 
 		return info
 	else:
-		logging.info("{0} did not match pattern, skipping.".format(filename))
+		logging.info("'{0}' did not match pattern, skipping.".format(filename))
 		return None
 
 
@@ -102,7 +102,7 @@ def organize_file(filename, series, season):
 
 def process_file(filename):
 	"""Set ownership and permissions for files, then rename."""
-	logging.info("Processing %s" % filename)
+	logging.info("Processing '{0}'".format(filename))
 
 	if CONFIG['Options']['User'] or CONFIG['Options']['Group']:
 		try:
@@ -125,7 +125,7 @@ def process_file(filename):
 			info['episode'],
 			info['title'],
 			info['extension'])
-		logging.info("Rename to: {0}".format(clean))
+		logging.info("Rename to: '{0}'".format(clean))
 		rename(filename, clean)
 
 		if CONFIG.getboolean('Options', 'OrganizeFiles'):
