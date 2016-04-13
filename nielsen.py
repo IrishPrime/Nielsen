@@ -21,7 +21,7 @@ CONFIG['DEFAULT'] = {'User': '',
 
 
 def load_config():
-	"""Check XDG directories for configuration files."""
+	"""Check XDG directories for configuration file."""
 	first_config = xdg.BaseDirectory.load_first_config("nielsen/nielsen.ini")
 
 	try:
@@ -140,6 +140,13 @@ def main():
 	PARSER.add_argument("-g", "--group", dest="group", help="Group to own files")
 	PARSER.add_argument("-m", "--mode", dest="mode", type=str,
 		help="File mode (permissions) in octal")
+	PARSER.add_argument("-o", "--organize", dest="organize", action="store_true",
+		help="Organize files")
+	PARSER.add_argument("--no-organize", dest="organize", action="store_false",
+		help="Do not organize files")
+	PARSER.set_defaults(organize=None)
+	PARSER.add_argument("-p", "--path", dest="mediapath",
+		help="Base directory to organize files into")
 	PARSER.add_argument("-l", "--log", dest="log_level", type=str,
 		choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
 		help="Logging level")
@@ -159,6 +166,12 @@ def main():
 	if ARGS.mode:
 		CONFIG['Options']['Mode'] = ARGS.mode
 
+	if ARGS.organize is not None:
+		CONFIG['Options']['OrganizeFiles'] = str(ARGS.organize)
+
+	if ARGS.mediapath:
+		CONFIG['Options']['MediaPath'] = ARGS.mediapath
+
 	if ARGS.log_level:
 		CONFIG['Options']['LogLevel'] = ARGS.log_level.upper()
 
@@ -166,11 +179,7 @@ def main():
 	logging.basicConfig(filename="nielsen.log",
 		level=getattr(logging, CONFIG['Options']['LogLevel'], 30))
 
-	logging.debug("User: '{0}', Group: '{1}', Mode: '{2}', LogLevel: '{3}'".format(
-		CONFIG['Options']['User'],
-		CONFIG['Options']['Group'],
-		CONFIG['Options']['Mode'],
-		CONFIG['Options']['LogLevel']))
+	logging.debug(dict(CONFIG.items('Options')))
 
 	# Iterate over files
 	for f in ARGS.files:
