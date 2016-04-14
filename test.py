@@ -30,6 +30,22 @@ class TestNielsen(unittest.TestCase):
 				"extension": "avi"
 			},
 
+			"The Glades -02.01- Family Matters.avi": {
+				"series": "The Glades",
+				"season": "02",
+				"episode": "01",
+				"title": "Family Matters",
+				"extension": "avi"
+			},
+
+			"The Glades -201- Family Matters.avi": {
+				"series": "The Glades",
+				"season": "02",
+				"episode": "01",
+				"title": "Family Matters",
+				"extension": "avi"
+			},
+
 			"Supernatural.S10E15.mp4": {
 				"series": "Supernatural",
 				"season": "10",
