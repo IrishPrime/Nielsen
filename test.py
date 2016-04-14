@@ -103,6 +103,14 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			"supernatural.1117.hdtv-lol[ettv]/supernatural.1117.red.meat.hdtv-lol[ettv].mp4": {
+				"series": "Supernatural",
+				"season": "11",
+				"episode": "17",
+				"title": "Red Meat",
+				"extension": "mp4"
+			},
+
 			# "Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv":
 			# "Bones -04.01-02- .mkv",
 		}

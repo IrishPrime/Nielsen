@@ -62,7 +62,7 @@ def get_file_info(filename):
 
 	# Check against patterns until a matching one is found
 	for p in patterns:
-		m = p.match(filename)
+		m = p.match(path.basename(filename))
 		if m:
 			series = m.group("series").replace('.', ' ').strip()
 
