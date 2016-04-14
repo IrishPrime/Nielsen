@@ -13,11 +13,11 @@ from shutil import chown, move
 
 CONFIG = configparser.ConfigParser()
 CONFIG['DEFAULT'] = {'User': '',
-		'Group': '',
-		'Mode': '644',
-		'LogLevel': 'WARNING',
-		'MediaPath': '',
-		'OrganizeFiles': 'False'}
+	'Group': '',
+	'Mode': '644',
+	'LogLevel': 'WARNING',
+	'MediaPath': '',
+	'OrganizeFiles': 'False'}
 
 
 def load_config(filename=None):
