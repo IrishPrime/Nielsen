@@ -43,48 +43,61 @@ def get_file_info(filename):
 		- episode: Episode number
 		- title: Episode title (if found)
 		- extension: File extension
-	Typical filenames are something like:
+	Filename variants:
 		The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
+		The Glades -02.01- Family Matters.avi
+		The Glades -201- Family Matters.avi
 	"""
 
-	p = re.compile(r"(?P<series>.*)\s+S?(?P<season>\d{2,})\s?E?(?P<episode>\d{2,})\s*(?P<title>.*)?\s+(?P<extension>\w+)$", re.IGNORECASE)
-	m = p.match(re.compile("\.").sub(" ", filename))
-	if m:
-		series = m.group("series").strip()
+	patterns = [
+		# The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
+		re.compile(r"(?P<series>.+)\.+S?(?P<season>\d{2,})\.?E?(?P<episode>\d{2,})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
+		# The Glades -02.01- Family Matters.avi
+		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{2})\.(?P<episode>\d{2})-\s*(?P<title>.*)\.(?P<extension>.+)$", re.IGNORECASE),
+		# The Glades -201- Family Matters.avi
+		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{1,2})(?P<episode>\d{2,})-\s*(?P<title>.*)\.(?P<extension>.+)$", re.IGNORECASE),
+	]
 
-		# Use title case if everything is lowercase
-		if m.group("series").islower():
-			series = m.group("series").title()
+	# Check against patterns until a matching one is found
+	for p in patterns:
+		m = p.match(filename)
+		if m:
+			series = m.group("series").replace('.', ' ').strip()
 
-		# Check series name against filter
-		# series = filter_series(series)
+			# Use title case if everything is lowercase
+			if m.group("series").islower():
+				series = m.group("series").replace('.', ' ').title()
 
-		# Strip tags and release notes from the episode title
-		tags = re.compile(r"(HDTV|720p|WEB|PROPER|REPACK|RERIP).*", re.IGNORECASE)
-		title = re.sub(tags, "", m.group("title")).strip()
+			# Check series name against filter
+			# series = filter_series(series)
 
-		# Use title case if everything is lowercase
-		if title.islower():
-			title = title.title()
+			# Strip tags and release notes from the episode title
+			tags = re.compile(r"(HDTV|720p|WEB|PROPER|REPACK|RERIP).*", re.IGNORECASE)
+			title = re.sub(tags, "", m.group("title")).replace('.', ' ').strip()
 
-		info = {
-			'series': series,
-			'season': m.group('season').strip(),
-			'episode': m.group('episode').strip(),
-			'title': title,
-			'extension': m.group('extension').strip()
-		}
+			# Use title case if everything is lowercase
+			if title.islower():
+				title = title.title()
 
-		logging.info("Series: '{0}'".format(info['series']))
-		logging.info("Season: '{0}'".format(info['season']))
-		logging.info("Episode: '{0}'".format(info['episode']))
-		logging.info("Title: '{0}'".format(info['title']))
-		logging.info("Extension: '{0}'".format(info['extension']))
+			info = {
+				'series': series,
+				'season': m.group('season').strip().zfill(2),
+				'episode': m.group('episode').strip(),
+				'title': title,
+				'extension': m.group('extension').strip()
+			}
 
-		return info
-	else:
-		logging.info("'{0}' did not match pattern, skipping.".format(filename))
-		return None
+			logging.info("Series: '{0}'".format(info['series']))
+			logging.info("Season: '{0}'".format(info['season']))
+			logging.info("Episode: '{0}'".format(info['episode']))
+			logging.info("Title: '{0}'".format(info['title']))
+			logging.info("Extension: '{0}'".format(info['extension']))
+
+			return info
+
+	# Filename didn't match any pattern in the list
+	logging.info("'{0}' did not match any pattern, skipping.".format(filename))
+	return None
 
 
 def organize_file(filename, series, season):
