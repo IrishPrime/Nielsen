@@ -55,9 +55,9 @@ def get_file_info(filename):
 		# The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
 		re.compile(r"(?P<series>.+)\.+S?(?P<season>\d{2,})\.?E?(?P<episode>\d{2,})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
 		# The Glades -02.01- Family Matters.avi
-		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{2})\.(?P<episode>\d{2})-\s*(?P<title>.*)\.(?P<extension>.+)$", re.IGNORECASE),
+		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{2})\.(?P<episode>\d{2})-\s*(?P<title>.*)\.(?P<extension>.+)$"),
 		# The Glades -201- Family Matters.avi
-		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{1,2})(?P<episode>\d{2,})-\s*(?P<title>.*)\.(?P<extension>.+)$", re.IGNORECASE),
+		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{1,2})(?P<episode>\d{2,})-\s*(?P<title>.*)\.(?P<extension>.+)$"),
 	]
 
 	# Check against patterns until a matching one is found
