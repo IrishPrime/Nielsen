@@ -22,6 +22,14 @@ class TestNielsen(unittest.TestCase):
 				"extension": "avi"
 			},
 
+			"the.glades.s02e01.family.matters.hdtv.xvid-fqm.avi": {
+				"series": "The Glades",
+				"season": "02",
+				"episode": "01",
+				"title": "Family Matters",
+				"extension": "avi"
+			},
+
 			"The.Glades.S02E01.HDTV.XviD-FQM.avi": {
 				"series": "The Glades",
 				"season": "02",
