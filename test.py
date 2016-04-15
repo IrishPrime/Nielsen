@@ -80,7 +80,7 @@ class TestNielsen(unittest.TestCase):
 
 			# Title casing this will yield slightly incorrect results
 			"person.of.interest.s0310.the.devil's.share.hdtv.avi": {
-				"series": "Person Of Interest",
+				"series": "Person of Interest",
 				"season": "03",
 				"episode": "10",
 				"title": "The Devil'S Share",
@@ -88,7 +88,7 @@ class TestNielsen(unittest.TestCase):
 			},
 
 			"Castle.(2009).S07E18.720p.WEB-RiP.mp4": {
-				"series": "Castle (2009)",
+				"series": "Castle",
 				"season": "07",
 				"episode": "18",
 				"title": "",
@@ -96,7 +96,7 @@ class TestNielsen(unittest.TestCase):
 			},
 
 			"Castle.(2009).S01E01.Flowers.for.Your.Grave.720p.WEB-RiP.mp4": {
-				"series": "Castle (2009)",
+				"series": "Castle",
 				"season": "01",
 				"episode": "01",
 				"title": "Flowers for Your Grave",
@@ -119,12 +119,39 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			"the.flash.(2014).217.hdtv-lol[ettv].mp4": {
+				"series": "The Flash",
+				"season": "02",
+				"episode": "17",
+				"title": "",
+				"extension": "mp4"
+			},
+
+			"The.Flash.2014.S02E17.HDTV.x264-LOL[ettv].mp4": {
+				"series": "The Flash",
+				"season": "02",
+				"episode": "17",
+				"title": "",
+				"extension": "mp4"
+			},
+
 			# "Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv":
 			# "Bones -04.01-02- .mkv",
 		}
 
 		for path, info in file_names.items():
 			self.assertEqual(nielsen.get_file_info(path), info)
+
+	def test_filter_series(self):
+		self.assertEqual(nielsen.filter_series("Castle (2009)"), "Castle")
+		self.assertEqual(nielsen.filter_series("Dc'S Legends Of Tomorrow"), "Legends of Tomorrow")
+		self.assertEqual(nielsen.filter_series("Game Of Thrones"), "Game of Thrones")
+		self.assertEqual(nielsen.filter_series("It's Always Sunny In Philadelphia"), "It's Always Sunny in Philadelphia")
+		self.assertEqual(nielsen.filter_series("Its Always Sunny In Philadelphia"), "It's Always Sunny in Philadelphia")
+		self.assertEqual(nielsen.filter_series("Mr Robot"), "Mr. Robot")
+		self.assertEqual(nielsen.filter_series("Person Of Interest"), "Person of Interest")
+		self.assertEqual(nielsen.filter_series("The Flash (2014)"), "The Flash")
+		self.assertEqual(nielsen.filter_series("The Flash 2014"), "The Flash")
 
 
 if __name__ == "__main__":

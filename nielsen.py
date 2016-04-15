@@ -74,7 +74,7 @@ def get_file_info(filename):
 				series = m.group("series").replace('.', ' ').title()
 
 			# Check series name against filter
-			# series = filter_series(series)
+			series = filter_series(series)
 
 			# Strip tags and release notes from the episode title
 			tags = re.compile(r"(HDTV|720p|WEB|PROPER|REPACK|RERIP).*", re.IGNORECASE)
@@ -120,6 +120,23 @@ def organize_file(filename, series, season):
 	else:
 		logging.error("No MediaPath defined.")
 		return None
+
+
+def filter_series(series):
+	"""Check series name against list and replace with preferred name.
+	Use the key/value pairs in the [Filters] section of the config file.
+	Match the series name against the left hand side (ignoring case) and
+	replace it with the right hand side.
+		Castle (2009) = Castle
+		Game Of Thrones = Game of Thrones
+		Its Always Sunny In Philadelphia = It's Always Sunny in Philadelphia
+		Marvel's Agents of S.H.I.E.L.D. = Agents of S.H.I.E.L.D.
+		Mr Robot = Mr. Robot
+	"""
+	if CONFIG.has_option('Filters', series):
+		return CONFIG['Filters'][series]
+	else:
+		return series
 
 
 def process_file(filename):
