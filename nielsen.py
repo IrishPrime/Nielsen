@@ -47,13 +47,16 @@ def get_file_info(filename):
 		- extension: File extension
 	Filename variants:
 		The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
+		the.glades.201.family.matters.hdtv.xvid-fqm.avi
 		The Glades -02.01- Family Matters.avi
 		The Glades -201- Family Matters.avi
 	"""
 
 	patterns = [
 		# The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
-		re.compile(r"(?P<series>.+)\.+S?(?P<season>\d{2,})\.?E?(?P<episode>\d{2,})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
+		re.compile(r"(?P<series>.+)\.+S?(?P<season>\d{2})\.?E?(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
+		# the.glades.201.family.matters.hdtv.xvid-fqm.avi
+		re.compile(r"(?P<series>.+)\.+S?(?P<season>\d{1,})\.?E?(?P<episode>\d{2,})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
 		# The Glades -02.01- Family Matters.avi
 		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{2})\.(?P<episode>\d{2})-\s*(?P<title>.*)\.(?P<extension>.+)$"),
 		# The Glades -201- Family Matters.avi
