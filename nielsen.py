@@ -6,8 +6,7 @@ import argparse
 import configparser
 import logging
 import re
-import xdg.BaseDirectory
-from os import chmod, makedirs, path, rename
+from os import chmod, getenv, makedirs, name, path, rename
 from shutil import chown, move
 
 
@@ -28,9 +27,14 @@ def load_config(filename=None):
 	if filename and path.isfile(filename):
 		config = filename
 	else:
-		config = xdg.BaseDirectory.load_first_config("nielsen/nielsen.ini")
+		if name == "posix":
+			import xdg.BaseDirectory
+			config = xdg.BaseDirectory.load_first_config("nielsen/nielsen.ini")
+		elif name == "nt":
+			config = path.join("", getenv("APPDATA"), "nielsen", "nielsen.ini")
 
 	try:
+		logging.debug("Load config: '{0}'".format(config))
 		CONFIG.read(config)
 	except:
 		logging.warning("Unable to load config: '{0}'".format(config))
@@ -143,18 +147,19 @@ def process_file(filename):
 	"""Set ownership and permissions for files, then rename."""
 	logging.info("Processing '{0}'".format(filename))
 
-	if CONFIG['Options']['User'] or CONFIG['Options']['Group']:
-		try:
-			chown(filename, CONFIG['Options']['User'] or None,
-				CONFIG['Options']['Group'] or None)
-		except PermissionError as err:
-			logging.error("chown failed. {0}".format(err))
+	if name == "posix":
+		if CONFIG['Options']['User'] or CONFIG['Options']['Group']:
+			try:
+				chown(filename, CONFIG['Options']['User'] or None,
+					CONFIG['Options']['Group'] or None)
+			except PermissionError as err:
+				logging.error("chown failed. {0}".format(err))
 
-	if CONFIG['Options']['Mode']:
-		try:
-			chmod(filename, int(CONFIG['Options']['Mode'], 8))
-		except PermissionError as err:
-			logging.error("chmod failed. {0}".format(err))
+		if CONFIG['Options']['Mode']:
+			try:
+				chmod(filename, int(CONFIG['Options']['Mode'], 8))
+			except PermissionError as err:
+				logging.error("chmod failed. {0}".format(err))
 
 	info = get_file_info(filename)
 	if info:
