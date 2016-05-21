@@ -119,19 +119,27 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
-			"the.flash.(2014).217.hdtv-lol[ettv].mp4": {
+			"the.flash.(2014).217.flash.back.hdtv-lol[ettv].mp4": {
 				"series": "The Flash",
 				"season": "02",
 				"episode": "17",
-				"title": "",
+				"title": "Flash Back",
 				"extension": "mp4"
 			},
 
-			"The.Flash.2014.S02E17.HDTV.x264-LOL[ettv].mp4": {
+			"The.Flash.2014.S02E17.Flash.Back.HDTV.x264-LOL[ettv].mp4": {
 				"series": "The Flash",
 				"season": "02",
 				"episode": "17",
-				"title": "",
+				"title": "Flash Back",
+				"extension": "mp4"
+			},
+
+			"The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4": {
+				"series": "The Flash",
+				"season": "02",
+				"episode": "17",
+				"title": "Flash Back",
 				"extension": "mp4"
 			},
 
