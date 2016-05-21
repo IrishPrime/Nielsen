@@ -57,6 +57,8 @@ def get_file_info(filename):
 	"""
 
 	patterns = [
+		# The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4
+		re.compile(r"(?P<series>.+)\.+(?P<year>\d{4})\.(?P<season>\d{1,2})(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
 		# The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
 		re.compile(r"(?P<series>.+)\.+S?(?P<season>\d{2})\.?E?(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
 		# the.glades.201.family.matters.hdtv.xvid-fqm.avi
