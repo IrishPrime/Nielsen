@@ -15,6 +15,7 @@ CONFIG['DEFAULT'] = {
 	'User': '',
 	'Group': '',
 	'Mode': '644',
+	'LogFile': 'nielsen.log',
 	'LogLevel': 'WARNING',
 	'MediaPath': '',
 	'OrganizeFiles': 'False'
@@ -24,21 +25,21 @@ CONFIG['DEFAULT'] = {
 def load_config(filename=None):
 	"""Load config file specified by path, or check XDG directories for
 	configuration file."""
+	CONFIG['Options'] = {}
+
 	if filename and path.isfile(filename):
-		config = filename
+		configfile = filename
 	else:
 		if name == "posix":
 			import xdg.BaseDirectory
-			config = xdg.BaseDirectory.load_first_config("nielsen/nielsen.ini")
+			configfile = xdg.BaseDirectory.load_first_config("nielsen/nielsen.ini")
 		elif name == "nt":
-			config = path.join("", getenv("APPDATA"), "nielsen", "nielsen.ini")
+			configfile = path.join("", getenv("APPDATA"), "nielsen", "nielsen.ini")
 
 	try:
-		logging.debug("Load config: '{0}'".format(config))
-		CONFIG.read(config)
+		CONFIG.read(configfile)
 	except:
-		logging.warning("Unable to load config: '{0}'".format(config))
-		CONFIG['Options'] = {}
+		print("Unable to load config: '{0}'".format(configfile))
 
 
 def get_file_info(filename):
@@ -98,11 +99,11 @@ def get_file_info(filename):
 				'extension': m.group('extension').strip()
 			}
 
-			logging.info("Series: '{0}'".format(info['series']))
-			logging.info("Season: '{0}'".format(info['season']))
-			logging.info("Episode: '{0}'".format(info['episode']))
-			logging.info("Title: '{0}'".format(info['title']))
-			logging.info("Extension: '{0}'".format(info['extension']))
+			logging.debug("Series: '{0}'".format(info['series']))
+			logging.debug("Season: '{0}'".format(info['season']))
+			logging.debug("Episode: '{0}'".format(info['episode']))
+			logging.debug("Title: '{0}'".format(info['title']))
+			logging.debug("Extension: '{0}'".format(info['extension']))
 
 			return info
 
@@ -222,8 +223,9 @@ def main():
 	if ARGS.log_level:
 		CONFIG['Options']['LogLevel'] = ARGS.log_level.upper()
 
-	# Validate the log level
-	logging.basicConfig(filename="nielsen.log",
+	# Configure logging
+	logging.basicConfig(filename=CONFIG['Options']['LogFile'],
+		format='%(asctime)-15s %(levelname)-8s %(message)s',
 		level=getattr(logging, CONFIG['Options']['LogLevel'], 30))
 
 	logging.debug(dict(CONFIG.items('Options')))
