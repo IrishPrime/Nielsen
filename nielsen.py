@@ -7,7 +7,7 @@ import configparser
 import logging
 import re
 from os import chmod, getenv, makedirs, name, path, rename
-from shutil import chown, move
+from shutil import chown
 
 
 CONFIG = configparser.ConfigParser()
@@ -119,10 +119,18 @@ def organize_file(filename, series, season):
 			"Season {0}".format(season))
 		logging.debug("Creating and/or moving to: {0}".format(new_path))
 		makedirs(new_path, exist_ok=True)
-		try:
-			move(filename, new_path)
-		except Exception as err:
-			logging.error(err)
+
+		dst = path.join(new_path, filename)
+
+		# Do not attempt to overwrite existing files
+		if path.isfile(dst):
+			logging.warning("{0} already exists. File will not be moved.".format(dst))
+		else:
+			try:
+				rename(filename, dst)
+			except Exception as err:
+				logging.error(err)
+
 		return new_path
 	else:
 		logging.error("No MediaPath defined.")
@@ -173,7 +181,11 @@ def process_file(filename):
 			info['title'],
 			info['extension'])
 		logging.info("Rename to: '{0}'".format(clean))
-		rename(filename, clean)
+
+		if path.isfile(clean):
+			logging.warning("{0} already exists. File will not be renamed.".format(clean))
+		else:
+			rename(filename, clean)
 
 		if CONFIG.getboolean('Options', 'OrganizeFiles'):
 			organize_file(clean, info['series'], info['season'])
