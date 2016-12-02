@@ -18,7 +18,8 @@ CONFIG['DEFAULT'] = {
 	'LogFile': 'nielsen.log',
 	'LogLevel': 'WARNING',
 	'MediaPath': '',
-	'OrganizeFiles': 'False'
+	'OrganizeFiles': 'False',
+	'DryRun': 'False'
 }
 
 
@@ -182,6 +183,10 @@ def process_file(filename):
 			info['extension'])
 		logging.info("Rename to: '{0}'".format(clean))
 
+		if CONFIG.getboolean('Options', 'DryRun'):
+			print(filename + " → " + clean)
+			return
+
 		if path.isfile(clean):
 			logging.warning("{0} already exists. File will not be renamed.".format(clean))
 		else:
@@ -204,6 +209,9 @@ def main():
 	PARSER.add_argument("--no-organize", dest="organize", action="store_false",
 		help="Do not organize files")
 	PARSER.set_defaults(organize=None)
+	PARSER.add_argument("-n", "--dry-run", dest="dry_run", action="store_true",
+		help="Do not rename files, just list the renaming actions.")
+	PARSER.set_defaults(dry_run=False)
 	PARSER.add_argument("-p", "--path", dest="mediapath",
 		help="Base directory to organize files into")
 	PARSER.add_argument("-l", "--log", dest="log_level", type=str,
@@ -228,6 +236,9 @@ def main():
 
 	if ARGS.organize is not None:
 		CONFIG['Options']['OrganizeFiles'] = str(ARGS.organize)
+
+	if ARGS.dry_run is not False:
+		CONFIG['Options']['DryRun'] = str(ARGS.dry_run)
 
 	if ARGS.mediapath:
 		CONFIG['Options']['MediaPath'] = ARGS.mediapath
