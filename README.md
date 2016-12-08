@@ -9,3 +9,6 @@ as well as change the owner, group, and file permissions to user specified
 values (which may be more useful for media streaming scenarios), and move the
 files into a more hierarchical folder structure that keeps your media
 directories tidy.
+
+View the [wiki](https://github.com/IrishPrime/Nielsen/wiki) for configuration
+information.
