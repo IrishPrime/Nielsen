@@ -62,7 +62,7 @@ def get_file_info(filename):
 		# The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4
 		re.compile(r"(?P<series>.+)\.+(?P<year>\d{4})\.(?P<season>\d{1,2})(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
 		# The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
-		re.compile(r"(?P<series>.+)\.+S?(?P<season>\d{2})\.?E?(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
+		re.compile(r"(?P<series>.+)\.+S(?P<season>\d{2})\.?E(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
 		# the.glades.201.family.matters.hdtv.xvid-fqm.avi
 		re.compile(r"(?P<series>.+)\.+S?(?P<season>\d{1,})\.?E?(?P<episode>\d{2,})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
 		# The Glades -02.01- Family Matters.avi
@@ -85,7 +85,7 @@ def get_file_info(filename):
 			series = filter_series(series)
 
 			# Strip tags and release notes from the episode title
-			tags = re.compile(r"(HDTV|720p|WEB|PROPER|REPACK|RERIP).*", re.IGNORECASE)
+			tags = re.compile(r"(1080p|720p|HDTV|WEB|PROPER|REPACK|RERIP).*", re.IGNORECASE)
 			title = re.sub(tags, "", m.group("title")).replace('.', ' ').strip()
 
 			# Use title case if everything is lowercase
