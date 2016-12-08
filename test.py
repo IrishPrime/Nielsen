@@ -143,6 +143,14 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			"Game.of.Thrones.S06E07.1080p.HDTV.6CH.ShAaNiG.mkv": {
+				"series": "Game of Thrones",
+				"season": "06",
+				"episode": "07",
+				"title": "",
+				"extension": "mkv"
+			},
+
 			# "Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv":
 			# "Bones -04.01-02- .mkv",
 		}
