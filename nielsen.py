@@ -100,6 +100,13 @@ def get_file_info(filename):
 				'extension': m.group('extension').strip()
 			}
 
+			# Check for double episode files
+			# "Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv":
+			if info['title'].lower().startswith("e") and info['title'][1:3].isnumeric():
+				if int(info['title'][1:3]) == int(info['episode']) + 1:
+					info['episode'] += "-" + info['title'][1:3]
+					info['title'] = info['title'][3:].strip()
+
 			logging.debug("Series: '{0}'".format(info['series']))
 			logging.debug("Season: '{0}'".format(info['season']))
 			logging.debug("Episode: '{0}'".format(info['episode']))
