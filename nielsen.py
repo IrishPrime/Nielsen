@@ -7,8 +7,7 @@ import configparser
 import logging
 import re
 from os import chmod, getenv, makedirs, name, path, rename
-from shutil import chown
-
+from shutil import chown, move
 
 CONFIG = configparser.ConfigParser()
 CONFIG['DEFAULT'] = {
@@ -135,7 +134,7 @@ def organize_file(filename, series, season):
 			logging.warning("{0} already exists. File will not be moved.".format(dst))
 		else:
 			try:
-				rename(filename, dst)
+				move(filename, dst)
 			except Exception as err:
 				logging.error(err)
 
