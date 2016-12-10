@@ -151,8 +151,21 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mkv"
 			},
 
-			# "Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv":
-			# "Bones -04.01-02- .mkv",
+			"Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv": {
+				"series": "Bones",
+				"season": "04",
+				"episode": "01-02",
+				"title": "",
+				"extension": "mkv"
+			},
+
+			"Sample.Show.S01E01.E19.Protocol.720p.HDTV.X264-DIMENSION.mkv": {
+				"series": "Sample Show",
+				"season": "01",
+				"episode": "01",
+				"title": "E19 Protocol",
+				"extension": "mkv"
+			},
 		}
 
 		for path, info in file_names.items():
