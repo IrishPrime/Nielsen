@@ -7,6 +7,9 @@ python:
   - "3.6"
   - "nightly"
 # command to install dependencies
-install: "pip install -r requirements.txt"
+install:
+    - pip install -r requirements.txt
+    - python setup.py -q install
 # command to run tests
-script: test.py
+script:
+    - python test.py
