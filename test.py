@@ -7,7 +7,7 @@ import nielsen
 
 class TestNielsen(unittest.TestCase):
 
-	nielsen.load_config()
+	nielsen.load_config("nielsen.ini")
 
 	def test_get_file_info(self):
 		file_names = {
