@@ -3,6 +3,7 @@
 
 import unittest
 import nielsen
+import titles
 
 
 class TestNielsen(unittest.TestCase):
@@ -181,6 +182,12 @@ class TestNielsen(unittest.TestCase):
 		self.assertEqual(nielsen.filter_series("Person Of Interest"), "Person of Interest")
 		self.assertEqual(nielsen.filter_series("The Flash (2014)"), "The Flash")
 		self.assertEqual(nielsen.filter_series("The Flash 2014"), "The Flash")
+
+
+class TestTitles(unittest.TestCase):
+
+	def test_get_episode_title(self):
+		self.assertEqual(titles.get_episode_title('tt4532368', 1, 12), 'Last Refuge')
 
 
 if __name__ == "__main__":
