@@ -3,43 +3,11 @@
 chown, chmod, rename, and organize TV show files.
 """
 import argparse
-import configparser
 import logging
 import re
-from os import chmod, getenv, makedirs, name, path, rename
+from config import load_config, CONFIG
+from os import chmod, makedirs, name, path, rename
 from shutil import chown, move
-
-CONFIG = configparser.ConfigParser()
-CONFIG['DEFAULT'] = {
-	'User': '',
-	'Group': '',
-	'Mode': '644',
-	'LogFile': 'nielsen.log',
-	'LogLevel': 'WARNING',
-	'MediaPath': '',
-	'OrganizeFiles': 'False',
-	'DryRun': 'False'
-}
-
-
-def load_config(filename=None):
-	"""Load config file specified by path, or check XDG directories for
-	configuration file."""
-	CONFIG['Options'] = {}
-
-	if filename and path.isfile(filename):
-		configfile = filename
-	else:
-		if name == "posix":
-			import xdg.BaseDirectory
-			configfile = xdg.BaseDirectory.load_first_config("nielsen/nielsen.ini")
-		elif name == "nt":
-			configfile = path.join("", getenv("APPDATA"), "nielsen", "nielsen.ini")
-
-	try:
-		CONFIG.read(configfile)
-	except:
-		print("Unable to load config: '{0}'".format(configfile))
 
 
 def get_file_info(filename):
@@ -227,7 +195,7 @@ def main():
 	PARSER.add_argument("files", nargs="+", type=str, help="Files to operate on")
 	ARGS = PARSER.parse_args()
 
-	# Load XDG configuration file
+	# Load configuration
 	load_config(ARGS.configfile)
 
 	# Override the settings in the config file if given on the command line
