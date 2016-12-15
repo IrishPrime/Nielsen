@@ -6,6 +6,7 @@ import argparse
 import configparser
 import logging
 import re
+import titles
 from os import chmod, getenv, makedirs, name, path, rename
 from shutil import chown, move
 
@@ -18,7 +19,8 @@ CONFIG['DEFAULT'] = {
 	'LogLevel': 'WARNING',
 	'MediaPath': '',
 	'OrganizeFiles': 'False',
-	'DryRun': 'False'
+	'DryRun': 'False',
+	'IMDB': 'False',
 }
 
 
@@ -70,34 +72,43 @@ def get_file_info(filename):
 		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{1,2})(?P<episode>\d{2,})-\s*(?P<title>.*)\.(?P<extension>.+)$"),
 	]
 
+	tags = re.compile(r"(1080p|720p|HDTV|WEB|PROPER|REPACK|RERIP).*",
+		re.IGNORECASE)
+
 	# Check against patterns until a matching one is found
 	for p in patterns:
 		m = p.match(path.basename(filename))
 		if m:
-			series = m.group("series").replace('.', ' ').strip()
-
-			# Use title case if everything is lowercase
-			if m.group("series").islower():
-				series = m.group("series").replace('.', ' ').title()
-
-			# Check series name against filter
-			series = filter_series(series)
-
-			# Strip tags and release notes from the episode title
-			tags = re.compile(r"(1080p|720p|HDTV|WEB|PROPER|REPACK|RERIP).*", re.IGNORECASE)
-			title = re.sub(tags, "", m.group("title")).replace('.', ' ').strip()
-
-			# Use title case if everything is lowercase
-			if title.islower():
-				title = title.title()
-
+			# Match found, create a dictionary to hold file information
 			info = {
-				'series': series,
+				'series': m.group('series').replace('.', ' ').strip(),
 				'season': m.group('season').strip().zfill(2),
 				'episode': m.group('episode').strip(),
-				'title': title,
+				'title': m.group('title').replace('.', ' ').strip(),
 				'extension': m.group('extension').strip()
 			}
+
+			# Check series name against filter
+			info['series'] = filter_series(info['series'])
+
+			# Strip tags and release notes from the episode title
+			info['title'] = re.sub(tags, "", info['title']).strip()
+
+			if info['title'].islower():
+				# Use title case if everything is lowercase
+				info['title'] = info['title'].title()
+			elif not info['title'] and CONFIG.getboolean('Options', 'IMDB'):
+				# If no title, find it
+				if not CONFIG.has_section('IMDB'):
+					# Ensure we have a config section to keep track of IMDB IDs
+					CONFIG.add_section('IMDB')
+
+				if not CONFIG.has_option('IMDB', info['series']):
+					# Get IMDB ID of series if needed
+					CONFIG['IMDB'][info['series']] = titles.get_imdb_id(info['series'])
+
+				info['title'] = titles.get_episode_title(CONFIG.get('IMDB',
+					info['series']), info['season'], info['episode'])
 
 			# Check for double episode files
 			# "Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv":
@@ -156,8 +167,13 @@ def filter_series(series):
 		Mr Robot = Mr. Robot
 	"""
 	if CONFIG.has_option('Filters', series):
+		# Return configured name if found
 		return CONFIG['Filters'][series]
+	elif series.islower():
+		# Use title case if everything is lowercase
+		return series.title()
 	else:
+		# Return original input if nothing else to do
 		return series
 
 
