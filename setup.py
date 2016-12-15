@@ -5,7 +5,7 @@ from distutils.core import setup
 
 setup(
 	name='Nielsen',
-	version='0.7.1',
+	version='0.8.0',
 	author="Michael 'Irish' O'Neill",
 	author_email="irish.dot@gmail.com",
 	url='https://github.com/IrishPrime/nielsen/',
@@ -26,7 +26,7 @@ setup(
 	],
 	platforms='linux',
 	license='GNU General Public License v3 (GPLv3)',
-	py_modules=['nielsen'],
+	py_modules=['nielsen', 'config'],
 )
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
