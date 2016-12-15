@@ -3,45 +3,12 @@
 chown, chmod, rename, and organize TV show files.
 """
 import argparse
-import configparser
 import logging
 import re
 import titles
-from os import chmod, getenv, makedirs, name, path, rename
+from config import load_config, CONFIG
+from os import chmod, makedirs, name, path, rename
 from shutil import chown, move
-
-CONFIG = configparser.ConfigParser()
-CONFIG['DEFAULT'] = {
-	'User': '',
-	'Group': '',
-	'Mode': '644',
-	'LogFile': 'nielsen.log',
-	'LogLevel': 'WARNING',
-	'MediaPath': '',
-	'OrganizeFiles': 'False',
-	'DryRun': 'False',
-	'IMDB': 'False',
-}
-
-
-def load_config(filename=None):
-	"""Load config file specified by path, or check XDG directories for
-	configuration file."""
-	CONFIG['Options'] = {}
-
-	if filename and path.isfile(filename):
-		configfile = filename
-	else:
-		if name == "posix":
-			import xdg.BaseDirectory
-			configfile = xdg.BaseDirectory.load_first_config("nielsen/nielsen.ini")
-		elif name == "nt":
-			configfile = path.join("", getenv("APPDATA"), "nielsen", "nielsen.ini")
-
-	try:
-		CONFIG.read(configfile)
-	except:
-		print("Unable to load config: '{0}'".format(configfile))
 
 
 def get_file_info(filename):
@@ -72,8 +39,7 @@ def get_file_info(filename):
 		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{1,2})(?P<episode>\d{2,})-\s*(?P<title>.*)\.(?P<extension>.+)$"),
 	]
 
-	tags = re.compile(r"(1080p|720p|HDTV|WEB|PROPER|REPACK|RERIP).*",
-		re.IGNORECASE)
+	tags = re.compile(r"(1080p|720p|HDTV|WEB|PROPER|REPACK|RERIP).*", re.IGNORECASE)
 
 	# Check against patterns until a matching one is found
 	for p in patterns:
@@ -243,7 +209,7 @@ def main():
 	PARSER.add_argument("files", nargs="+", type=str, help="Files to operate on")
 	ARGS = PARSER.parse_args()
 
-	# Load XDG configuration file
+	# Load configuration
 	load_config(ARGS.configfile)
 
 	# Override the settings in the config file if given on the command line

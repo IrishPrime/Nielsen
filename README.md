@@ -12,3 +12,5 @@ directories tidy.
 
 View the [wiki](https://github.com/IrishPrime/Nielsen/wiki) for configuration
 information.
+
+[![Build Status](https://travis-ci.org/IrishPrime/Nielsen.svg?branch=master)](https://travis-ci.org/IrishPrime/Nielsen)
