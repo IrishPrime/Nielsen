@@ -17,13 +17,15 @@ def get_file_info(filename):
 		- series: Series name
 		- season: Season number
 		- episode: Episode number
-		- title: Episode title (if found)
+		- title: Episode title (if found/enabled)
 		- extension: File extension
 	Filename variants:
+		The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4
 		The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
 		the.glades.201.family.matters.hdtv.xvid-fqm.avi
 		The Glades -02.01- Family Matters.avi
 		The Glades -201- Family Matters.avi
+		Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv
 	"""
 
 	patterns = [
@@ -69,15 +71,12 @@ def get_file_info(filename):
 					# Ensure we have a config section to keep track of IMDB IDs
 					CONFIG.add_section('IMDB')
 
-				if not CONFIG.has_option('IMDB', info['series']):
-					# Get IMDB ID of series if needed
-					CONFIG['IMDB'][info['series']] = titles.get_imdb_id(info['series'])
-
-				info['title'] = titles.get_episode_title(CONFIG.get('IMDB',
-					info['series']), info['season'], info['episode'])
+				# Get episode title from IMDB
+				info['title'] = titles.get_episode_title(
+					info['season'], info['episode'], series=info['series'])
 
 			# Check for double episode files
-			# "Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv":
+			# Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv
 			if info['title'].lower().startswith("e") and info['title'][1:3].isnumeric():
 				if int(info['title'][1:3]) == int(info['episode']) + 1:
 					info['episode'] += "-" + info['title'][1:3]
