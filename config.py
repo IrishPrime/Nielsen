@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
 Config module for Nielsen.
+The CONFIG variable from this module should be imported into other modules as
+needed.
 """
 import configparser
 from os import getenv, name, path
@@ -19,7 +21,7 @@ CONFIG['DEFAULT'] = {
 
 
 def load_config(filename=None):
-	"""Load config file specified by path, or check XDG directories for
+	"""Load config file specified by filename, or check XDG directories for
 	configuration file."""
 	if filename and path.isfile(filename):
 		configfile = filename
@@ -39,6 +41,5 @@ def load_config(filename=None):
 		CONFIG.add_section('Options')
 	except configparser.DuplicateSectionError:
 		pass
-
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
