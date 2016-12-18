@@ -3,15 +3,13 @@
 
 import unittest
 import nielsen
-import titles
-import config
 
 
 class TestConfig(unittest.TestCase):
 
 	def test_load_config(self):
-		config.load_config('nielsen.ini')
-		self.assertEqual(config.CONFIG['Options']['LogFile'], '/var/log/nielsen.log')
+		nielsen.load_config('nielsen.ini')
+		self.assertEqual(nielsen.CONFIG['Options']['LogFile'], '/var/log/nielsen.log')
 
 
 class TestNielsen(unittest.TestCase):
@@ -212,11 +210,11 @@ class TestNielsen(unittest.TestCase):
 class TestTitles(unittest.TestCase):
 
 	def test_get_imdb_id(self):
-		self.assertEqual(titles.get_imdb_id('Agents of SHIELD'), 'tt2364582')
+		self.assertEqual(nielsen.get_imdb_id('Agents of SHIELD'), 'tt2364582')
 
 	def test_get_episode_title(self):
-		self.assertEqual(titles.get_episode_title(1, 12, imdb_id='tt4532368'), 'Last Refuge')
-		self.assertEqual(titles.get_episode_title(4, 2, series='Castle'), 'Heroes and Villains')
+		self.assertEqual(nielsen.get_episode_title(1, 12, imdb_id='tt4532368'), 'Last Refuge')
+		self.assertEqual(nielsen.get_episode_title(4, 2, series='Castle'), 'Heroes and Villains')
 
 
 if __name__ == "__main__":

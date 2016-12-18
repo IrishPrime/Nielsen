@@ -29,7 +29,7 @@ setup(
 	],
 	install_requires=['pyxdg', 'omdb'],
 	entry_points={
-		'console_scripts': ['nielsen=nielsen.nielsen:main'],
+		'console_scripts': ['nielsen=nielsen.api:main'],
 	},
 	platforms='linux',
 	license='GNU General Public License v3 (GPLv3)',

@@ -5,8 +5,8 @@ chown, chmod, rename, and organize TV show files.
 import argparse
 import logging
 import re
-import titles
-from config import load_config, CONFIG
+from .titles import get_episode_title
+from .config import load_config, CONFIG
 from os import chmod, makedirs, name, path, rename
 from shutil import chown, move
 
@@ -72,7 +72,7 @@ def get_file_info(filename):
 					CONFIG.add_section('IMDB')
 
 				# Get episode title from IMDB
-				info['title'] = titles.get_episode_title(
+				info['title'] = get_episode_title(
 					info['season'], info['episode'], series=info['series'])
 
 			# Check for double episode files

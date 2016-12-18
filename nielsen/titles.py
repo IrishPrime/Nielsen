@@ -5,7 +5,7 @@ Fetches information from IMDB through the omdb module.
 """
 
 import omdb
-from config import CONFIG
+from .config import CONFIG
 
 
 def get_imdb_id(series):
