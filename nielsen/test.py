@@ -2,16 +2,16 @@
 """Test cases for nielsen."""
 
 import unittest
-from nielsen.nielsen import get_file_info, filter_series
-import nielsen.titles
-import nielsen.config
+import nielsen
+import titles
+import config
 
 
 class TestConfig(unittest.TestCase):
 
 	def test_load_config(self):
-		nielsen.config.load_config('nielsen.ini')
-		self.assertEqual(nielsen.config.CONFIG['Options']['LogFile'], '/var/log/nielsen.log')
+		config.load_config('nielsen.ini')
+		self.assertEqual(config.CONFIG['Options']['LogFile'], '/var/log/nielsen.log')
 
 
 class TestNielsen(unittest.TestCase):
@@ -195,28 +195,28 @@ class TestNielsen(unittest.TestCase):
 		}
 
 		for path, info in file_names.items():
-			self.assertEqual(get_file_info(path), info)
+			self.assertEqual(nielsen.get_file_info(path), info)
 
 	def test_filter_series(self):
-		self.assertEqual(filter_series("Castle (2009)"), "Castle")
-		self.assertEqual(filter_series("Dc'S Legends Of Tomorrow"), "Legends of Tomorrow")
-		self.assertEqual(filter_series("Game Of Thrones"), "Game of Thrones")
-		self.assertEqual(filter_series("It's Always Sunny In Philadelphia"), "It's Always Sunny in Philadelphia")
-		self.assertEqual(filter_series("Its Always Sunny In Philadelphia"), "It's Always Sunny in Philadelphia")
-		self.assertEqual(filter_series("Mr Robot"), "Mr. Robot")
-		self.assertEqual(filter_series("Person Of Interest"), "Person of Interest")
-		self.assertEqual(filter_series("The Flash (2014)"), "The Flash")
-		self.assertEqual(filter_series("The Flash 2014"), "The Flash")
+		self.assertEqual(nielsen.filter_series("Castle (2009)"), "Castle")
+		self.assertEqual(nielsen.filter_series("Dc'S Legends Of Tomorrow"), "Legends of Tomorrow")
+		self.assertEqual(nielsen.filter_series("Game Of Thrones"), "Game of Thrones")
+		self.assertEqual(nielsen.filter_series("It's Always Sunny In Philadelphia"), "It's Always Sunny in Philadelphia")
+		self.assertEqual(nielsen.filter_series("Its Always Sunny In Philadelphia"), "It's Always Sunny in Philadelphia")
+		self.assertEqual(nielsen.filter_series("Mr Robot"), "Mr. Robot")
+		self.assertEqual(nielsen.filter_series("Person Of Interest"), "Person of Interest")
+		self.assertEqual(nielsen.filter_series("The Flash (2014)"), "The Flash")
+		self.assertEqual(nielsen.filter_series("The Flash 2014"), "The Flash")
 
 
 class TestTitles(unittest.TestCase):
 
 	def test_get_imdb_id(self):
-		self.assertEqual(nielsen.titles.get_imdb_id('Agents of SHIELD'), 'tt2364582')
+		self.assertEqual(titles.get_imdb_id('Agents of SHIELD'), 'tt2364582')
 
 	def test_get_episode_title(self):
-		self.assertEqual(nielsen.titles.get_episode_title(1, 12, imdb_id='tt4532368'), 'Last Refuge')
-		self.assertEqual(nielsen.titles.get_episode_title(4, 2, series='Castle'), 'Heroes and Villains')
+		self.assertEqual(titles.get_episode_title(1, 12, imdb_id='tt4532368'), 'Last Refuge')
+		self.assertEqual(titles.get_episode_title(4, 2, series='Castle'), 'Heroes and Villains')
 
 
 if __name__ == "__main__":

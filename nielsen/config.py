@@ -8,7 +8,7 @@ import configparser
 from os import getenv, name, path
 
 CONFIG = configparser.ConfigParser()
-CONFIG['DEFAULT'] = {
+CONFIG['Options'] = {
 	'User': '',
 	'Group': '',
 	'Mode': '644',
@@ -17,6 +17,7 @@ CONFIG['DEFAULT'] = {
 	'MediaPath': '',
 	'OrganizeFiles': 'False',
 	'DryRun': 'False',
+	'IMDB': 'False',
 }
 
 

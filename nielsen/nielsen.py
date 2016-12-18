@@ -9,6 +9,7 @@ import titles
 from config import load_config, CONFIG
 from os import chmod, makedirs, name, path, rename
 from shutil import chown, move
+from version import VERSION
 
 
 def get_file_info(filename):
@@ -186,7 +187,8 @@ def process_file(filename):
 def main():
 	# Command line arguments
 	PARSER = argparse.ArgumentParser(description=
-		"Process episodes of TV shows for storage on a media server.")
+		"""Process episodes of TV shows for storage on a media server.
+		Version: {0}""".format(VERSION))
 	PARSER.add_argument("-u", "--user", dest="user", help="User to own files")
 	PARSER.add_argument("-g", "--group", dest="group", help="Group to own files")
 	PARSER.add_argument("-m", "--mode", dest="mode", type=str,
