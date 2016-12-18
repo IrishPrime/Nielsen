@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Setup for Nielsen."""
 
-from distutils.core import setup
-from nielsen.version import VERSION
+from setuptools import setup
 
 setup(
 	name='Nielsen',
-	version=VERSION,
+	version='0.9.2',
 	author="Michael 'Irish' O'Neill",
 	author_email="irish.dot@gmail.com",
 	url='https://github.com/IrishPrime/nielsen/',
@@ -25,6 +24,10 @@ setup(
 		'Topic :: Desktop Environment :: File Managers',
 		'Topic :: Multimedia :: Video',
 	],
+	install_requires=['pyxdg', 'omdb'],
+	entry_points={
+		'console_scripts': ['nielsen=nielsen.nielsen:main'],
+	},
 	platforms='linux',
 	license='GNU General Public License v3 (GPLv3)',
 	packages=['nielsen'],
