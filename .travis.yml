@@ -9,4 +9,5 @@ install:
     - pip install .
 # command to run tests
 script:
-    - python nielsen/test.py
+    - cd nielsen
+    - python test.py
