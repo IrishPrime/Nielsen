@@ -15,7 +15,6 @@ class TestConfig(unittest.TestCase):
 class TestNielsen(unittest.TestCase):
 
 	def test_get_file_info(self):
-
 		file_names = {
 			"Something.Close.12.mp4":
 			None,
