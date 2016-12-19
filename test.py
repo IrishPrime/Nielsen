@@ -3,18 +3,23 @@
 
 import unittest
 import nielsen
-import titles
+
+
+class TestConfig(unittest.TestCase):
+
+	def test_load_config(self):
+		nielsen.load_config('nielsen.ini')
+		self.assertEqual(nielsen.CONFIG['Options']['LogFile'], '/var/log/nielsen.log')
 
 
 class TestNielsen(unittest.TestCase):
-
-	nielsen.load_config("nielsen.ini")
 
 	def test_get_file_info(self):
 		file_names = {
 			"Something.Close.12.mp4":
 			None,
 
+			# Very nicely formatted
 			"The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi": {
 				"series": "The Glades",
 				"season": "02",
@@ -23,6 +28,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "avi"
 			},
 
+			# Needs title casing
 			"the.glades.s02e01.family.matters.hdtv.xvid-fqm.avi": {
 				"series": "The Glades",
 				"season": "02",
@@ -31,6 +37,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "avi"
 			},
 
+			# Missing Title
 			"The.Glades.S02E01.HDTV.XviD-FQM.avi": {
 				"series": "The Glades",
 				"season": "02",
@@ -39,6 +46,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "avi"
 			},
 
+			# Already processed by nielsen
 			"The Glades -02.01- Family Matters.avi": {
 				"series": "The Glades",
 				"season": "02",
@@ -47,6 +55,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "avi"
 			},
 
+			# Another common post-processing format
 			"The Glades -201- Family Matters.avi": {
 				"series": "The Glades",
 				"season": "02",
@@ -55,6 +64,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "avi"
 			},
 
+			# Has most necessary information, but formatted strangely
 			"Supernatural.S10E15.mp4": {
 				"series": "Supernatural",
 				"season": "10",
@@ -63,6 +73,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			# Same as above, but with an extra dot between season and episode
 			"Pushing.Daisies.S02.E03.mp4": {
 				"series": "Pushing Daisies",
 				"season": "02",
@@ -71,6 +82,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			# Nicely formatted, but with an apostrophe in the title
 			"Person.of.Interest.S0310.The.Devil's.Share.HDTV.avi": {
 				"series": "Person of Interest",
 				"season": "03",
@@ -88,6 +100,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "avi"
 			},
 
+			# Testing WEB-RiP tag and series filtering
 			"Castle.(2009).S07E18.720p.WEB-RiP.mp4": {
 				"series": "Castle",
 				"season": "07",
@@ -96,6 +109,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			# Same as above, but with all fields
 			"Castle.(2009).S01E01.Flowers.for.Your.Grave.720p.WEB-RiP.mp4": {
 				"series": "Castle",
 				"season": "01",
@@ -104,6 +118,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			# Four digit season and episode combination
 			"supernatural.1117.red.meat.hdtv-lol[ettv].mp4": {
 				"series": "Supernatural",
 				"season": "11",
@@ -112,6 +127,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			# Specifying file within a directory
 			"supernatural.1117.hdtv-lol[ettv]/supernatural.1117.red.meat.hdtv-lol[ettv].mp4": {
 				"series": "Supernatural",
 				"season": "11",
@@ -120,6 +136,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			# Four digit year followed by three digit season and episode combination
 			"the.flash.(2014).217.flash.back.hdtv-lol[ettv].mp4": {
 				"series": "The Flash",
 				"season": "02",
@@ -128,6 +145,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			# Four digit year with season and episode markers
 			"The.Flash.2014.S02E17.Flash.Back.HDTV.x264-LOL[ettv].mp4": {
 				"series": "The Flash",
 				"season": "02",
@@ -136,6 +154,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			# Four digit year followed by three digit season and episode combination
 			"The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4": {
 				"series": "The Flash",
 				"season": "02",
@@ -144,6 +163,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mp4"
 			},
 
+			# Tag removal
 			"Game.of.Thrones.S06E07.1080p.HDTV.6CH.ShAaNiG.mkv": {
 				"series": "Game of Thrones",
 				"season": "06",
@@ -152,6 +172,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mkv"
 			},
 
+			# Multi-episode file
 			"Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv": {
 				"series": "Bones",
 				"season": "04",
@@ -160,6 +181,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "mkv"
 			},
 
+			# Single episode with what looks like a second episode marker in the title
 			"Sample.Show.S01E01.E19.Protocol.720p.HDTV.X264-DIMENSION.mkv": {
 				"series": "Sample Show",
 				"season": "01",
@@ -187,12 +209,11 @@ class TestNielsen(unittest.TestCase):
 class TestTitles(unittest.TestCase):
 
 	def test_get_imdb_id(self):
-		self.assertEqual(titles.get_imdb_id('Agents of SHIELD'), 'tt2364582')
-
+		self.assertEqual(nielsen.get_imdb_id('Agents of SHIELD'), 'tt2364582')
 
 	def test_get_episode_title(self):
-		self.assertEqual(titles.get_episode_title(1, 12, imdb_id='tt4532368'), 'Last Refuge')
-		self.assertEqual(titles.get_episode_title(4, 2, series='Castle'), 'Heroes and Villains')
+		self.assertEqual(nielsen.get_episode_title(1, 12, imdb_id='tt4532368'), 'Last Refuge')
+		self.assertEqual(nielsen.get_episode_title(4, 2, series='Castle'), 'Heroes and Villains')
 
 
 if __name__ == "__main__":
