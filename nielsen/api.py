@@ -182,6 +182,7 @@ def main():
 	# Command line arguments
 	PARSER = argparse.ArgumentParser(description=
 		"Process episodes of TV shows for storage on a media server.")
+	PARSER.add_argument("-c", "--config", dest="configfile", help="Config file")
 	PARSER.add_argument("-u", "--user", dest="user", help="User to own files")
 	PARSER.add_argument("-g", "--group", dest="group", help="Group to own files")
 	PARSER.add_argument("-m", "--mode", dest="mode", type=str,
@@ -191,6 +192,11 @@ def main():
 	PARSER.add_argument("--no-organize", dest="organize", action="store_false",
 		help="Do not organize files")
 	PARSER.set_defaults(organize=None)
+	PARSER.add_argument("-i", "--imdb", dest="imdb", action="store_true",
+		help="Fetch titles from IMDB")
+	PARSER.add_argument("--no-imdb", dest="imdb", action="store_false",
+		help="Do not fetch titles from IMDB")
+	PARSER.set_defaults(imdb=None)
 	PARSER.add_argument("-n", "--dry-run", dest="dry_run", action="store_true",
 		help="Do not rename files, just list the renaming actions.")
 	PARSER.set_defaults(dry_run=False)
@@ -199,7 +205,6 @@ def main():
 	PARSER.add_argument("-l", "--log", dest="log_level", type=str,
 		choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
 		help="Logging level")
-	PARSER.add_argument("-c", "--config", dest="configfile", help="Config file")
 	PARSER.add_argument("files", nargs="+", type=str, help="Files to operate on")
 	ARGS = PARSER.parse_args()
 
@@ -218,6 +223,9 @@ def main():
 
 	if ARGS.organize is not None:
 		CONFIG['Options']['OrganizeFiles'] = str(ARGS.organize)
+
+	if ARGS.imdb is not None:
+		CONFIG['Options']['IMDB'] = str(ARGS.imdb)
 
 	if ARGS.dry_run is not False:
 		CONFIG['Options']['DryRun'] = str(ARGS.dry_run)
