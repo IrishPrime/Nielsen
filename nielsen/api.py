@@ -139,7 +139,11 @@ def filter_series(series):
 
 def process_file(filename):
 	"""Set ownership and permissions for files, then rename."""
-	logging.info("Processing '{0}'".format(filename))
+	if path.exists(filename):
+		logging.info("Processing '{0}'".format(filename))
+	else:
+		logging.info("File not found '{0}'".format(filename))
+		return None
 
 	if name == "posix":
 		if CONFIG['Options']['User'] or CONFIG['Options']['Group']:
