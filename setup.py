@@ -21,8 +21,8 @@ setup(
 		'Operating System :: Microsoft :: Windows',
 		'Operating System :: POSIX :: Linux',
 		'Programming Language :: Python :: 3.3',
-		'Programming Language :: Python :: 3.4'
-		'Programming Language :: Python :: 3.5'
+		'Programming Language :: Python :: 3.4',
+		'Programming Language :: Python :: 3.5',
 		'Programming Language :: Python',
 		'Topic :: Desktop Environment :: File Managers',
 		'Topic :: Multimedia :: Video',
