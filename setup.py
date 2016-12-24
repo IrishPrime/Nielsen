@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
 	name='Nielsen',
-	version='0.9.5',
+	version='0.9.6',
 	author="Michael 'Irish' O'Neill",
 	author_email="irish.dot@gmail.com",
 	url='https://github.com/IrishPrime/nielsen/',
@@ -27,7 +27,7 @@ setup(
 		'Topic :: Desktop Environment :: File Managers',
 		'Topic :: Multimedia :: Video',
 	],
-	install_requires=['pyxdg', 'omdb'],
+	install_requires=['omdb'],
 	entry_points={
 		'console_scripts': ['nielsen=nielsen.api:main'],
 	},

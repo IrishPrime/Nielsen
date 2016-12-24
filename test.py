@@ -8,7 +8,8 @@ import nielsen
 class TestConfig(unittest.TestCase):
 
 	def test_load_config(self):
-		nielsen.load_config('nielsen.ini')
+		loaded = nielsen.load_config('nielsen.ini')
+		self.assertEqual(loaded, ['nielsen.ini'])
 		self.assertEqual(nielsen.CONFIG['Options']['LogFile'], '/var/log/nielsen.log')
 
 

@@ -6,7 +6,7 @@ import argparse
 import logging
 import re
 from .titles import get_episode_title
-from .config import load_config, CONFIG
+from .config import CONFIG, load_config, update_imdb_ids
 from os import chmod, makedirs, name, path, rename
 from shutil import chown, move
 
@@ -92,8 +92,8 @@ def get_file_info(filename):
 
 def organize_file(filename, series, season):
 	"""Move files to <MediaPath>/<Series>/Season <Season>."""
-	if CONFIG['Options']['MediaPath']:
-		new_path = path.join(CONFIG['Options']['MediaPath'], series,
+	if CONFIG.get('Options', 'MediaPath'):
+		new_path = path.join(CONFIG.get('Options', 'MediaPath'), series,
 			"Season {0}".format(season))
 		logging.debug("Creating and/or moving to: {0}".format(new_path))
 		makedirs(new_path, exist_ok=True)
@@ -128,7 +128,7 @@ def filter_series(series):
 	"""
 	if CONFIG.has_option('Filters', series):
 		# Return configured name if found
-		return CONFIG['Filters'][series]
+		return CONFIG.get('Filters', series)
 	elif series.islower():
 		# Use title case if everything is lowercase
 		return series.title()
@@ -146,16 +146,16 @@ def process_file(filename):
 		return None
 
 	if name == "posix":
-		if CONFIG['Options']['User'] or CONFIG['Options']['Group']:
+		if CONFIG.get('Options', 'User') or CONFIG.get('Options', 'Group'):
 			try:
-				chown(filename, CONFIG['Options']['User'] or None,
-					CONFIG['Options']['Group'] or None)
+				chown(filename, CONFIG.get('Options', 'User') or None,
+					CONFIG.get('Options', 'Group') or None)
 			except PermissionError as err:
 				logging.error("chown failed. {0}".format(err))
 
-		if CONFIG['Options']['Mode']:
+		if CONFIG.get('Options', 'Mode'):
 			try:
-				chmod(filename, int(CONFIG['Options']['Mode'], 8))
+				chmod(filename, int(CONFIG.getint('Options', 'Mode'), 8))
 			except PermissionError as err:
 				logging.error("chmod failed. {0}".format(err))
 
@@ -186,7 +186,7 @@ def main():
 	# Command line arguments
 	PARSER = argparse.ArgumentParser(description=
 		"Process episodes of TV shows for storage on a media server.")
-	PARSER.add_argument("-c", "--config", dest="configfile", help="Config file")
+	PARSER.add_argument("-c", "--config", dest="config_file", help="Config file")
 	PARSER.add_argument("-u", "--user", dest="user", help="User to own files")
 	PARSER.add_argument("-g", "--group", dest="group", help="Group to own files")
 	PARSER.add_argument("-m", "--mode", dest="mode", type=str,
@@ -213,43 +213,46 @@ def main():
 	ARGS = PARSER.parse_args()
 
 	# Load configuration
-	load_config(ARGS.configfile)
+	load_config(ARGS.config_file)
 
 	# Override the settings in the config file if given on the command line
 	if ARGS.user:
-		CONFIG['Options']['User'] = ARGS.user
+		CONFIG.set('Options', 'User', ARGS.user)
 
 	if ARGS.group:
-		CONFIG['Options']['Group'] = ARGS.group
+		CONFIG.set('Options', 'Group', ARGS.group)
 
 	if ARGS.mode:
-		CONFIG['Options']['Mode'] = ARGS.mode
+		CONFIG.set('Options', 'Mode', ARGS.mode)
 
 	if ARGS.organize is not None:
-		CONFIG['Options']['OrganizeFiles'] = str(ARGS.organize)
+		CONFIG.set('Options', 'OrganizeFiles', ARGS.organize)
 
 	if ARGS.imdb is not None:
-		CONFIG['Options']['IMDB'] = str(ARGS.imdb)
+		CONFIG.set('Options', 'IMDB', ARGS.imdb)
 
 	if ARGS.dry_run is not False:
-		CONFIG['Options']['DryRun'] = str(ARGS.dry_run)
+		CONFIG.set('Options', 'DryRun', ARGS.dry_run)
 
 	if ARGS.mediapath:
-		CONFIG['Options']['MediaPath'] = ARGS.mediapath
+		CONFIG.set('Options', 'MediaPath', ARGS.mediapath)
 
 	if ARGS.log_level:
-		CONFIG['Options']['LogLevel'] = ARGS.log_level.upper()
+		CONFIG.set('Options', 'LogLevel', ARGS.log_level.upper())
 
 	# Configure logging
-	logging.basicConfig(filename=CONFIG['Options']['LogFile'],
+	logging.basicConfig(filename=CONFIG.get('Options', 'LogFile'),
 		format='%(asctime)-15s %(levelname)-8s %(message)s',
-		level=getattr(logging, CONFIG['Options']['LogLevel'], 30))
+		level=getattr(logging, CONFIG.get('Options', 'LogLevel'), 30))
 
 	logging.debug(dict(CONFIG.items('Options')))
 
 	# Iterate over files
 	for f in ARGS.files:
 		process_file(f)
+
+	# Add IMDB IDs to config file
+	update_imdb_ids(ARGS.config_file)
 
 
 if __name__ == "__main__":
