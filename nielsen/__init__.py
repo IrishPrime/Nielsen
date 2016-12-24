@@ -11,6 +11,7 @@ from .api import (
 from .config import (
 	CONFIG,
 	load_config,
+	update_imdb_ids,
 )
 
 from .titles import (

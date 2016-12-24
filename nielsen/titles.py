@@ -41,7 +41,7 @@ def get_imdb_id(series):
 
 	logging.info("IMDB ID for '{0}': {1}".format(series, imdb_id))
 	# Add whatever we find or select back to the config
-	CONFIG['IMDB'][series] = imdb_id
+	CONFIG.set('IMDB', series, imdb_id)
 
 	return imdb_id
 
