@@ -24,26 +24,30 @@ CONFIG['Options'] = {
 }
 
 
-def load_config(filename=None):
-	"""Load config file specified by filename, or check XDG directories for
+def load_config(file_name=None):
+	"""Load config file specified by file_name, or check XDG directories for
 	configuration file."""
-	if filename and path.isfile(filename):
-		configfile = filename
+	if file_name and path.isfile(file_name):
+		config_file = file_name
 	else:
 		if name == "posix":
-			import xdg.BaseDirectory
-			configfile = xdg.BaseDirectory.load_first_config("nielsen/nielsen.ini")
+			config_file = ["/etc/xdg/nielsen/nielsen.ini",
+				"/etc/nielsen/nielsen.ini",
+				path.expanduser("~/.config/nielsen/nielsen.ini")]
 		elif name == "nt":
-			configfile = path.join("", getenv("APPDATA"), "nielsen", "nielsen.ini")
+			config_file = path.join("", getenv("APPDATA"), "nielsen", "nielsen.ini")
 
-	try:
-		CONFIG.read(configfile)
-	except:
-		print("Unable to load config: '{0}'".format(configfile))
+	return CONFIG.read(config_file)
 
-	try:
-		CONFIG.add_section('Options')
-	except configparser.DuplicateSectionError:
-		pass
+
+def update_imdb_ids(file_name=None):
+	"""Add imdb_ids to IMDB section of file_name or default user file."""
+	# Reloading the config will overwrite existing options from filename, but
+	# will not unset newly added options, so the IMDB section should be
+	# unaffected.
+	config_files = load_config(file_name)
+	file_name = config_files[-1]
+	with open(file_name, 'w') as f:
+		CONFIG.write(f)
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
