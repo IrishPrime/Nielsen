@@ -19,7 +19,10 @@ def get_imdb_id(series):
 		imdb_id = CONFIG['IMDB'][series]
 	else:
 		# Search IMDB for series
-		results = omdb.search_series(series)
+		try:
+			results = omdb.search_series(series)
+		except:
+			logging.error("Unable to retrieve series names.")
 
 		if len(results) == 1:
 			# If only one result, use it
@@ -38,6 +41,8 @@ def get_imdb_id(series):
 			except (ValueError, IndexError, EOFError) as e:
 				logging.error("Caught exception: {0}".format(e))
 				return None
+		else:
+			imdb_id = None
 
 	logging.info("IMDB ID for '{0}': {1}".format(series, imdb_id))
 	# Add whatever we find or select back to the config
@@ -55,8 +60,12 @@ def get_episode_title(season, episode, imdb_id=None, series=None):
 	if imdb_id:
 		logging.info("IMDB ID: {0}, Season: {1}, Episode: {2}".format(imdb_id,
 			season, episode))
-		return omdb.imdbid(imdb_id, season=season, episode=episode)['title']
-	else:
-		return None
+		try:
+			return omdb.imdbid(imdb_id, season=season, episode=episode)['title']
+		except:
+			logging.error("Unable to retrieve episode title.")
+
+	# If all else fails, return an empty string, not None
+	return str()
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
