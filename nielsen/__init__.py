@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-'''Mark this as a package.'''
+'''
+chown, chmod, rename, and organize TV show files.
+'''
 
 from .api import (
 	filter_series,

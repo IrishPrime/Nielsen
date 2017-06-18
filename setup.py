@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
 	name='Nielsen',
-	version='0.9.6',
+	version='0.9.7',
 	author="Michael 'Irish' O'Neill",
 	author_email="irish.dot@gmail.com",
 	url='https://github.com/IrishPrime/nielsen/',

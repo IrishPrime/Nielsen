@@ -27,7 +27,6 @@ def get_file_info(filename):
 		The Glades -201- Family Matters.avi
 		Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv
 	"""
-
 	patterns = [
 		# The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4
 		re.compile(r"(?P<series>.+)\.+(?P<year>\d{4})\.(?P<season>\d{1,2})(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
@@ -155,7 +154,7 @@ def process_file(filename):
 
 		if CONFIG.get('Options', 'Mode'):
 			try:
-				chmod(filename, int(CONFIG.getint('Options', 'Mode'), 8))
+				chmod(filename, int(CONFIG.get('Options', 'Mode'), 8))
 			except PermissionError as err:
 				logging.error("chmod failed. {0}".format(err))
 
@@ -183,6 +182,8 @@ def process_file(filename):
 
 
 def main():
+	'''Handle command line arguments and run all files through the process_file
+	function.'''
 	# Command line arguments
 	PARSER = argparse.ArgumentParser(description=
 		"Process episodes of TV shows for storage on a media server.")
