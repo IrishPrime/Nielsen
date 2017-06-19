@@ -27,7 +27,9 @@ setup(
 		'Topic :: Desktop Environment :: File Managers',
 		'Topic :: Multimedia :: Video',
 	],
+	requires=['requests'],
 	install_requires=['requests'],
+	provides=['nielsen'],
 	entry_points={
 		'console_scripts': ['nielsen=nielsen.api:main'],
 	},
