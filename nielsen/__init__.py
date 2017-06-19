@@ -13,12 +13,12 @@ from .api import (
 from .config import (
 	CONFIG,
 	load_config,
-	update_imdb_ids,
+	update_series_ids,
 )
 
 from .titles import (
 	get_episode_title,
-	get_imdb_id,
+	get_series_id,
 )
 
 __all__ = ['api', 'titles', 'config']
