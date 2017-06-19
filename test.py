@@ -4,6 +4,9 @@
 import unittest
 import nielsen
 
+# Ensure config is loaded regardless of test order
+nielsen.load_config('nielsen.ini')
+
 
 class TestConfig(unittest.TestCase):
 
@@ -13,7 +16,7 @@ class TestConfig(unittest.TestCase):
 		self.assertEqual(nielsen.CONFIG['Options']['LogFile'], '/var/log/nielsen.log')
 
 
-class TestNielsen(unittest.TestCase):
+class TestAPI(unittest.TestCase):
 
 	def test_get_file_info(self):
 		file_names = {
@@ -38,7 +41,7 @@ class TestNielsen(unittest.TestCase):
 				"extension": "avi"
 			},
 
-			# Missing Title
+			# Missing title
 			"The.Glades.S02E01.HDTV.XviD-FQM.avi": {
 				"series": "The Glades",
 				"season": "02",
@@ -197,24 +200,46 @@ class TestNielsen(unittest.TestCase):
 
 	def test_filter_series(self):
 		self.assertEqual(nielsen.filter_series("Castle (2009)"), "Castle")
-		self.assertEqual(nielsen.filter_series("Dc'S Legends Of Tomorrow"), "Legends of Tomorrow")
+		self.assertEqual(nielsen.filter_series("Dc'S Legends Of Tomorrow"),
+			"Legends of Tomorrow")
 		self.assertEqual(nielsen.filter_series("Game Of Thrones"), "Game of Thrones")
-		self.assertEqual(nielsen.filter_series("It's Always Sunny In Philadelphia"), "It's Always Sunny in Philadelphia")
-		self.assertEqual(nielsen.filter_series("Its Always Sunny In Philadelphia"), "It's Always Sunny in Philadelphia")
+		self.assertEqual(nielsen.filter_series("It's Always Sunny In Philadelphia"),
+			"It's Always Sunny in Philadelphia")
+		self.assertEqual(nielsen.filter_series("Its Always Sunny In Philadelphia"),
+			"It's Always Sunny in Philadelphia")
 		self.assertEqual(nielsen.filter_series("Mr Robot"), "Mr. Robot")
-		self.assertEqual(nielsen.filter_series("Person Of Interest"), "Person of Interest")
+		self.assertEqual(nielsen.filter_series("Person Of Interest"),
+			"Person of Interest")
 		self.assertEqual(nielsen.filter_series("The Flash (2014)"), "The Flash")
 		self.assertEqual(nielsen.filter_series("The Flash 2014"), "The Flash")
 
 
 class TestTitles(unittest.TestCase):
 
-	def test_get_imdb_id(self):
-		self.assertEqual(nielsen.get_imdb_id('Agents of SHIELD'), 'tt2364582')
+	def test_get_series_id(self):
+		self.assertEqual(nielsen.get_series_id('Agents of SHIELD'), '31')
+		self.assertEqual(nielsen.get_series_id('American Gods'), '3182')
+		self.assertEqual(nielsen.get_series_id('Archer'), '315')
+		self.assertEqual(nielsen.get_series_id('Arrow'), '4')
+		self.assertEqual(nielsen.get_series_id('Castle'), '68')
+		self.assertEqual(nielsen.get_series_id(
+			'Dirk Gently\'s Holistic Detective Agency'), '11405')
+		self.assertEqual(nielsen.get_series_id('Game of Thrones'), '82')
+		self.assertEqual(nielsen.get_series_id('House'), '118')
+		self.assertEqual(nielsen.get_series_id('Legends of Tomorrow'), '1851')
+		self.assertEqual(nielsen.get_series_id('Legion'), '6393')
+		self.assertEqual(nielsen.get_series_id('Lucifer'), '1859')
+		self.assertEqual(nielsen.get_series_id('Preacher'), '3144')
+		self.assertEqual(nielsen.get_series_id('Supernatural'), '19')
+		self.assertEqual(nielsen.get_series_id('The Flash'), '13')
+		self.assertEqual(nielsen.get_series_id('Top Gear'), '522')
+		self.assertEqual(nielsen.get_series_id('Westworld'), '1371')
 
 	def test_get_episode_title(self):
-		self.assertEqual(nielsen.get_episode_title(1, 12, imdb_id='tt4532368'), 'Last Refuge')
-		self.assertEqual(nielsen.get_episode_title(4, 2, series='Castle'), 'Heroes and Villains')
+		self.assertEqual(nielsen.get_episode_title(1, 12, series_id='1851'),
+			'Last Refuge')
+		self.assertEqual(nielsen.get_episode_title(4, 3, series='Castle'),
+			'Head Case')
 
 
 if __name__ == "__main__":

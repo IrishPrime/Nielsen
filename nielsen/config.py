@@ -10,7 +10,7 @@ from os import getenv, name, path
 CONFIG = configparser.ConfigParser()
 CONFIG.add_section('Options')
 CONFIG.add_section('Filters')
-CONFIG.add_section('IMDB')
+CONFIG.add_section('IDs')
 CONFIG['Options'] = {
 	'User': '',
 	'Group': '',
@@ -20,7 +20,8 @@ CONFIG['Options'] = {
 	'MediaPath': '',
 	'OrganizeFiles': 'False',
 	'DryRun': 'False',
-	'IMDB': 'False',
+	'FetchTitles': 'False',
+	'ServiceURI': 'http://api.tvmaze.com/',
 }
 
 
@@ -40,14 +41,15 @@ def load_config(file_name=None):
 	return CONFIG.read(config_file)
 
 
-def update_imdb_ids(file_name=None):
-	"""Add imdb_ids to IMDB section of file_name or default user file."""
+def update_series_ids(file_name=None):
+	"""Add series_ids to IDs section of file_name or default user file."""
 	# Reloading the config will overwrite existing options from filename, but
-	# will not unset newly added options, so the IMDB section should be
-	# unaffected.
+	# will not unset newly added options, so the IDs section should be
+	# unaffected by said reload.
 	config_files = load_config(file_name)
 	file_name = config_files[-1]
 	with open(file_name, 'w') as f:
 		CONFIG.write(f)
+
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
