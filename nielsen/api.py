@@ -6,7 +6,7 @@ import argparse
 import logging
 import re
 from .titles import get_episode_title
-from .config import CONFIG, load_config, update_imdb_ids
+from .config import CONFIG, load_config, update_series_ids
 from os import chmod, makedirs, name, path, rename
 from shutil import chown, move
 
@@ -64,8 +64,8 @@ def get_file_info(filename):
 			if info['title'].islower():
 				# Use title case if everything is lowercase
 				info['title'] = info['title'].title()
-			elif not info['title'] and CONFIG.getboolean('Options', 'IMDB'):
-				# If no title, fetch from IMDB
+			elif not info['title'] and CONFIG.getboolean('Options', 'FetchTitles'):
+				# If no title, fetch from web
 				info['title'] = get_episode_title(
 					info['season'], info['episode'], series=info['series'])
 
@@ -197,11 +197,11 @@ def main():
 	PARSER.add_argument("--no-organize", dest="organize", action="store_false",
 		help="Do not organize files")
 	PARSER.set_defaults(organize=None)
-	PARSER.add_argument("-i", "--imdb", dest="imdb", action="store_true",
-		help="Fetch titles from IMDB")
-	PARSER.add_argument("--no-imdb", dest="imdb", action="store_false",
-		help="Do not fetch titles from IMDB")
-	PARSER.set_defaults(imdb=None)
+	PARSER.add_argument("-f", "--fetch", dest="fetch", action="store_true",
+		help="Fetch titles from the web")
+	PARSER.add_argument("--no-fetch", dest="fetch", action="store_false",
+		help="Do not fetch titles from the web")
+	PARSER.set_defaults(fetch=None)
 	PARSER.add_argument("-n", "--dry-run", dest="dry_run", action="store_true",
 		help="Do not rename files, just list the renaming actions.")
 	PARSER.set_defaults(dry_run=False)
@@ -229,8 +229,8 @@ def main():
 	if ARGS.organize is not None:
 		CONFIG.set('Options', 'OrganizeFiles', ARGS.organize)
 
-	if ARGS.imdb is not None:
-		CONFIG.set('Options', 'IMDB', ARGS.imdb)
+	if ARGS.fetch is not None:
+		CONFIG.set('Options', 'FetchTitles', ARGS.fetch)
 
 	if ARGS.dry_run is not False:
 		CONFIG.set('Options', 'DryRun', ARGS.dry_run)
@@ -252,8 +252,8 @@ def main():
 	for f in ARGS.files:
 		process_file(f)
 
-	# Add IMDB IDs to config file
-	update_imdb_ids(ARGS.config_file)
+	# Add series IDs to config file
+	update_series_ids(ARGS.config_file)
 
 
 if __name__ == "__main__":
