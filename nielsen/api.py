@@ -187,30 +187,36 @@ def main():
 	# Command line arguments
 	PARSER = argparse.ArgumentParser(description=
 		"Process episodes of TV shows for storage on a media server.")
+	# Config file
 	PARSER.add_argument("-c", "--config", dest="config_file", help="Config file")
+	# Ownership and permissions
 	PARSER.add_argument("-u", "--user", dest="user", help="User to own files")
 	PARSER.add_argument("-g", "--group", dest="group", help="Group to own files")
 	PARSER.add_argument("-m", "--mode", dest="mode", type=str,
 		help="File mode (permissions) in octal")
-	PARSER.add_argument("-o", "--organize", dest="organize", action="store_true",
-		help="Organize files")
-	PARSER.add_argument("--no-organize", dest="organize", action="store_false",
-		help="Do not organize files")
-	PARSER.set_defaults(organize=None)
-	PARSER.add_argument("-f", "--fetch", dest="fetch", action="store_true",
-		help="Fetch titles from the web")
-	PARSER.add_argument("--no-fetch", dest="fetch", action="store_false",
-		help="Do not fetch titles from the web")
-	PARSER.set_defaults(fetch=None)
-	PARSER.add_argument("-n", "--dry-run", dest="dry_run", action="store_true",
-		help="Do not rename files, just list the renaming actions.")
-	PARSER.set_defaults(dry_run=False)
+	# Organize files
+	group = PARSER.add_mutually_exclusive_group()
+	group.add_argument("-o", "--organize", dest="organize", action="store_const",
+		const='True', help="Organize files")
+	group.add_argument("--no-organize", dest="organize", action="store_const",
+		const='False', help="Do not organize files")
+	# Fetch titles
+	group = PARSER.add_mutually_exclusive_group()
+	group.add_argument("-f", "--fetch", dest="fetch", action="store_const",
+		const='True', help="Fetch titles from the web")
+	group.add_argument("--no-fetch", dest="fetch", action="store_const",
+		const='False', help="Do not fetch titles from the web")
+	# Dry run
+	PARSER.add_argument("-n", "--dry-run", dest="dry_run", action="store_const",
+		const='True', help="Do not rename files, just list the renaming actions.")
+	# Media path
 	PARSER.add_argument("-p", "--path", dest="mediapath",
 		help="Base directory to organize files into")
+	# Logging
 	PARSER.add_argument("-l", "--log", dest="log_level", type=str,
 		choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
 		help="Logging level")
-	PARSER.add_argument("files", nargs="+", type=str, help="Files to operate on")
+	PARSER.add_argument("FILE", nargs="+", type=str, help="File(s) to operate on")
 	ARGS = PARSER.parse_args()
 
 	# Load configuration
@@ -226,13 +232,13 @@ def main():
 	if ARGS.mode:
 		CONFIG.set('Options', 'Mode', ARGS.mode)
 
-	if ARGS.organize is not None:
+	if ARGS.organize:
 		CONFIG.set('Options', 'OrganizeFiles', ARGS.organize)
 
-	if ARGS.fetch is not None:
+	if ARGS.fetch:
 		CONFIG.set('Options', 'FetchTitles', ARGS.fetch)
 
-	if ARGS.dry_run is not False:
+	if ARGS.dry_run:
 		CONFIG.set('Options', 'DryRun', ARGS.dry_run)
 
 	if ARGS.mediapath:
@@ -246,10 +252,11 @@ def main():
 		format='%(asctime)-15s %(levelname)-8s %(message)s',
 		level=getattr(logging, CONFIG.get('Options', 'LogLevel'), 30))
 
+	# Log all configuration options
 	logging.debug(dict(CONFIG.items('Options')))
 
 	# Iterate over files
-	for f in ARGS.files:
+	for f in ARGS.FILE:
 		process_file(f)
 
 	# Add series IDs to config file
