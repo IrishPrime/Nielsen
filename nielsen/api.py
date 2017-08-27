@@ -168,6 +168,11 @@ def process_file(filename):
 			info['extension'])
 		logging.info("Rename to: '{0}'".format(clean))
 
+		# Get the base directory of the file so the rename operation doesn't
+		# move it unintentionally
+		base = path.dirname(filename)
+		clean = path.join(base, clean)
+
 		if CONFIG.getboolean('Options', 'DryRun'):
 			print(filename + " → " + clean)
 			return
