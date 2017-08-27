@@ -46,7 +46,7 @@ class TestAPI(unittest.TestCase):
 				"series": "The Glades",
 				"season": "02",
 				"episode": "01",
-				"title": "",
+				"title": "Family Matters",
 				"extension": "avi"
 			},
 
@@ -73,7 +73,7 @@ class TestAPI(unittest.TestCase):
 				"series": "Supernatural",
 				"season": "10",
 				"episode": "15",
-				"title": "",
+				"title": "The Things They Carried",
 				"extension": "mp4"
 			},
 
@@ -82,7 +82,7 @@ class TestAPI(unittest.TestCase):
 				"series": "Pushing Daisies",
 				"season": "02",
 				"episode": "03",
-				"title": "",
+				"title": "Bad Habits",
 				"extension": "mp4"
 			},
 
@@ -109,7 +109,7 @@ class TestAPI(unittest.TestCase):
 				"series": "Castle",
 				"season": "07",
 				"episode": "18",
-				"title": "",
+				"title": "At Close Range",
 				"extension": "mp4"
 			},
 
@@ -172,7 +172,7 @@ class TestAPI(unittest.TestCase):
 				"series": "Game of Thrones",
 				"season": "06",
 				"episode": "07",
-				"title": "",
+				"title": "The Broken Man",
 				"extension": "mkv"
 			},
 
