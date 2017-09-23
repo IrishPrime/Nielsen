@@ -176,6 +176,15 @@ class TestAPI(unittest.TestCase):
 				"extension": "mkv"
 			},
 
+			# File in a subdirectory
+			"Game.of.Thrones.S07E01.720p.HDTV.x264-AVS[rarbg]/Game.of.Thrones.S07E01.720p.HDTV.x264-AVS.mkv": {
+				"series": "Game of Thrones",
+				"season": "07",
+				"episode": "01",
+				"title": "Dragonstone",
+				"extension": "mkv"
+			},
+
 			# Multi-episode file
 			"Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv": {
 				"series": "Bones",
