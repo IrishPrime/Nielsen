@@ -8,7 +8,7 @@ import re
 from .titles import get_episode_title
 from .config import CONFIG, load_config, update_series_ids
 from os import chmod, makedirs, name, path, rename
-from shutil import chown, move
+from shutil import chown
 
 
 def get_file_info(filename):
@@ -97,14 +97,15 @@ def organize_file(filename, series, season):
 		logging.debug("Creating and/or moving to: {0}".format(new_path))
 		makedirs(new_path, exist_ok=True)
 
-		dst = path.join(new_path, filename)
+		dst = path.join(new_path, path.basename(filename))
 
 		# Do not attempt to overwrite existing files
 		if path.isfile(dst):
 			logging.warning("{0} already exists. File will not be moved.".format(dst))
 		else:
 			try:
-				move(filename, dst)
+				logging.info("Moved to {0}".format(dst))
+				rename(filename, dst)
 			except Exception as err:
 				logging.error(err)
 
@@ -168,10 +169,10 @@ def process_file(filename):
 			info['extension'])
 		logging.info("Rename to: '{0}'".format(clean))
 
-		# Get the base directory of the file so the rename operation doesn't
+		# Get the parent directory of the file so the rename operation doesn't
 		# move it unintentionally
-		base = path.dirname(filename)
-		clean = path.join(base, clean)
+		parent = path.dirname(filename)
+		clean = path.join(parent, clean)
 
 		if CONFIG.getboolean('Options', 'DryRun'):
 			print(filename + " → " + clean)
