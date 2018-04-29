@@ -161,6 +161,7 @@ class TestAPI(unittest.TestCase):
 			# Four digit year followed by three digit season and episode combination
 			"The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4": {
 				"series": "The Flash",
+				"year": "2014",
 				"season": "02",
 				"episode": "17",
 				"title": "Flash Back",
@@ -200,6 +201,15 @@ class TestAPI(unittest.TestCase):
 				"season": "01",
 				"episode": "01",
 				"title": "E19 Protocol",
+				"extension": "mkv"
+			},
+
+			# Unusual filename for last ditch effort pattern
+			"Limitless S01E11 This Is Your Brian on Drugs (1080p x265 Joy).mkv": {
+				"series": "Limitless",
+				"season": "01",
+				"episode": "11",
+				"title": "This is Your Brian on Drugs",
 				"extension": "mkv"
 			},
 		}
