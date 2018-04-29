@@ -5,10 +5,10 @@ chown, chmod, rename, and organize TV show files.
 import argparse
 import logging
 import re
-from .titles import get_episode_title
-from .config import CONFIG, load_config, update_series_ids
 from os import chmod, makedirs, name, path, rename
 from shutil import chown
+from .titles import get_episode_title
+from .config import CONFIG, load_config, update_series_ids
 
 
 def get_file_info(filename):
@@ -38,22 +38,25 @@ def get_file_info(filename):
 		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{2})\.(?P<episode>\d{2})-\s*(?P<title>.*)\.(?P<extension>.+)$"),
 		# The Glades -201- Family Matters.avi
 		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{1,2})(?P<episode>\d{2,})-\s*(?P<title>.*)\.(?P<extension>.+)$"),
+		# Last ditch effort to get essential information
+		re.compile(r"(?P<series>.+)S(?P<season>\d{1,2})E(?P<episode>\d{2,}).*\.(?P<extension>.+)$"),
 	]
 
 	tags = re.compile(r"(1080p|720p|HDTV|WEB|PROPER|REPACK|RERIP).*", re.IGNORECASE)
 
 	# Check against patterns until a matching one is found
-	for p in patterns:
-		m = p.match(path.basename(filename))
+	for pattern in patterns:
+		m = pattern.match(path.basename(filename))
 		if m:
 			# Match found, create a dictionary to hold file information
-			info = {
-				'series': m.group('series').replace('.', ' ').strip(),
-				'season': m.group('season').strip().zfill(2),
-				'episode': m.group('episode').strip(),
-				'title': m.group('title').replace('.', ' ').strip(),
-				'extension': m.group('extension').strip()
-			}
+			info = m.groupdict(default='')
+
+			info['series'] = info['series'].replace('.', ' ').strip()
+			info['season'] = info['season'].strip().zfill(2)
+			info['episode'] = info['episode'].strip()
+			info['extension'] = info['extension'].strip()
+			# The title is the only optional piece of information
+			info['title'] = info.get('title', '').replace('.', ' ').strip()
 
 			# Check series name against filter
 			info['series'] = filter_series(info['series'])
@@ -76,16 +79,16 @@ def get_file_info(filename):
 					info['episode'] += "-" + info['title'][1:3]
 					info['title'] = info['title'][3:].strip()
 
-			logging.debug("Series: '{0}'".format(info['series']))
-			logging.debug("Season: '{0}'".format(info['season']))
-			logging.debug("Episode: '{0}'".format(info['episode']))
-			logging.debug("Title: '{0}'".format(info['title']))
-			logging.debug("Extension: '{0}'".format(info['extension']))
+			logging.debug("Series: '%s'", info['series'])
+			logging.debug("Season: '%s'", info['season'])
+			logging.debug("Episode: '%s'", info['episode'])
+			logging.debug("Title: '%s'", info['title'])
+			logging.debug("Extension: '%s'", info['extension'])
 
 			return info
 
 	# Filename didn't match any pattern in the list
-	logging.info("'{0}' did not match any pattern, skipping.".format(filename))
+	logging.info('%s did not match any pattern, skipping.', filename)
 	return None
 
 
@@ -94,19 +97,19 @@ def organize_file(filename, series, season):
 	if CONFIG.get('Options', 'MediaPath'):
 		new_path = path.join(CONFIG.get('Options', 'MediaPath'), series,
 			"Season {0}".format(season))
-		logging.debug("Creating and/or moving to: {0}".format(new_path))
+		logging.debug('Creating and/or moving to: %s', new_path)
 		makedirs(new_path, exist_ok=True)
 
 		dst = path.join(new_path, path.basename(filename))
 
 		# Do not attempt to overwrite existing files
 		if path.isfile(dst):
-			logging.warning("{0} already exists. File will not be moved.".format(dst))
+			logging.warning('%s already exists. File will not be moved.', dst)
 		else:
 			try:
-				logging.info("Moved to {0}".format(dst))
 				rename(filename, dst)
-			except Exception as err:
+				logging.info('Moved to %s', dst)
+			except OSError as err:
 				logging.error(err)
 
 		return new_path
@@ -132,18 +135,18 @@ def filter_series(series):
 	elif series.islower():
 		# Use title case if everything is lowercase
 		return series.title()
-	else:
-		# Return original input if nothing else to do
-		return series
+
+	# Return original input if nothing to do
+	return series
 
 
 def process_file(filename):
 	"""Set ownership and permissions for files, then rename."""
 	if path.exists(filename):
-		logging.info("Processing '{0}'".format(filename))
+		logging.info("Processing '%s'", filename)
 	else:
-		logging.info("File not found '{0}'".format(filename))
-		return None
+		logging.info("File not found '%s'", filename)
+		return
 
 	if name == "posix":
 		if CONFIG.get('Options', 'User') or CONFIG.get('Options', 'Group'):
@@ -151,13 +154,13 @@ def process_file(filename):
 				chown(filename, CONFIG.get('Options', 'User') or None,
 					CONFIG.get('Options', 'Group') or None)
 			except PermissionError as err:
-				logging.error("chown failed. {0}".format(err))
+				logging.error("chown failed. %s", err)
 
 		if CONFIG.get('Options', 'Mode'):
 			try:
 				chmod(filename, int(CONFIG.get('Options', 'Mode'), 8))
 			except PermissionError as err:
-				logging.error("chmod failed. {0}".format(err))
+				logging.error("chmod failed. %s", err)
 
 	info = get_file_info(filename)
 	if info:
@@ -167,7 +170,7 @@ def process_file(filename):
 			info['episode'],
 			info['title'],
 			info['extension'])
-		logging.info("Rename to: '{0}'".format(clean))
+		logging.info("Rename to: '%s'", clean)
 
 		# Get the parent directory of the file so the rename operation doesn't
 		# move it unintentionally
@@ -179,7 +182,7 @@ def process_file(filename):
 			return
 
 		if path.isfile(clean):
-			logging.warning("{0} already exists. File will not be renamed.".format(clean))
+			logging.warning("%s already exists. File will not be renamed.", clean)
 		else:
 			rename(filename, clean)
 
