@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Setup for Nielsen."""
+'''Setup for Nielsen.'''
 
 from setuptools import setup
 

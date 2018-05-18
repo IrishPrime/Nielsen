@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""
+'''
 chown, chmod, rename, and organize TV show files.
-"""
+'''
 import argparse
 import logging
 import re
@@ -12,7 +12,7 @@ from .config import CONFIG, load_config, update_series_ids
 
 
 def get_file_info(filename):
-	"""Get information about an episode from its filename.
+	'''Get information about an episode from its filename.
 	Returns a dictionary with the following keys:
 		- series: Series name
 		- season: Season number
@@ -26,7 +26,7 @@ def get_file_info(filename):
 		The Glades -02.01- Family Matters.avi
 		The Glades -201- Family Matters.avi
 		Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv
-	"""
+	'''
 	patterns = [
 		# The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4
 		re.compile(r"(?P<series>.+)\.+(?P<year>\d{4})\.(?P<season>\d{1,2})(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
@@ -93,7 +93,7 @@ def get_file_info(filename):
 
 
 def organize_file(filename, series, season):
-	"""Move files to <MediaPath>/<Series>/Season <Season>."""
+	'''Move files to <MediaPath>/<Series>/Season <Season>.'''
 	if CONFIG.get('Options', 'MediaPath'):
 		new_path = path.join(CONFIG.get('Options', 'MediaPath'), series,
 			"Season {0}".format(season))
@@ -119,7 +119,7 @@ def organize_file(filename, series, season):
 
 
 def filter_series(series):
-	"""Check series name against list and replace with preferred name.
+	'''Check series name against list and replace with preferred name.
 	Use the key/value pairs in the [Filters] section of the config file.
 	Match the series name against the left hand side (ignoring case) and
 	replace it with the right hand side.
@@ -128,7 +128,7 @@ def filter_series(series):
 		Its Always Sunny In Philadelphia = It's Always Sunny in Philadelphia
 		Marvel's Agents of S.H.I.E.L.D. = Agents of S.H.I.E.L.D.
 		Mr Robot = Mr. Robot
-	"""
+	'''
 	if CONFIG.has_option('Filters', series):
 		# Return configured name if found
 		return CONFIG.get('Filters', series)
@@ -141,7 +141,7 @@ def filter_series(series):
 
 
 def process_file(filename):
-	"""Set ownership and permissions for files, then rename."""
+	'''Set ownership and permissions for files, then rename.'''
 	if path.exists(filename):
 		logging.info("Processing '%s'", filename)
 	else:
@@ -272,7 +272,8 @@ def main():
 	update_series_ids(ARGS.config_file)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 	main()
+
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab

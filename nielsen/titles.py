@@ -21,8 +21,10 @@ def get_series_id(series):
 		try:
 			response = requests.get('{0}search/shows?q={1}'.
 				format(CONFIG['Options']['ServiceURI'], series))
-		except:
+		except IOError as e:
 			logging.error('Unable to retrieve series names.')
+			logging.debug(e)
+			exit()
 
 		# Get search results as JSON
 		results = response.json()
@@ -70,8 +72,9 @@ def get_episode_title(season, episode, series_id=None, series=None):
 			title = response.json()['name']
 			logging.info('Title: %s', title)
 			return title
-		except:
+		except IOError as e:
 			logging.error('Unable to retrieve episode title.')
+			logging.debug(e)
 
 	# If all else fails, return an empty string, not None
 	return str()

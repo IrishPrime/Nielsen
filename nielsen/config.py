@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""
+'''
 Config module for Nielsen.
 The CONFIG variable from this module should be imported into other modules as
 needed.
-"""
+'''
 import configparser
 from os import getenv, name, path
 
@@ -26,8 +26,8 @@ CONFIG['Options'] = {
 
 
 def load_config(file_name=None):
-	"""Load config file specified by file_name, or check XDG directories for
-	configuration file."""
+	'''Load config file specified by file_name, or check XDG directories for
+	configuration file.'''
 	if file_name and path.isfile(file_name):
 		config_file = file_name
 	else:
@@ -42,8 +42,8 @@ def load_config(file_name=None):
 
 
 def update_series_ids(file_name=None):
-	"""Add series_ids to IDs section of file_name or default user file."""
-	# Reloading the config will overwrite existing options from filename, but
+	'''Add series_ids to IDs section of file_name or default user file.'''
+	# Reloading the config will overwrite existing options from file_name, but
 	# will not unset newly added options, so the IDs section should be
 	# unaffected by said reload.
 	config_files = load_config(file_name)
