@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test cases for nielsen."""
+'''Test cases for Nielsen.'''
 
 import unittest
 import nielsen
@@ -9,16 +9,20 @@ nielsen.load_config('nielsen.ini')
 
 
 class TestConfig(unittest.TestCase):
+	'''Tests for the config module'''
 
 	def test_load_config(self):
+		'''Load the sample config file and check for a non-default value'''
 		loaded = nielsen.load_config('nielsen.ini')
 		self.assertEqual(loaded, ['nielsen.ini'])
 		self.assertEqual(nielsen.CONFIG['Options']['LogFile'], '/var/log/nielsen.log')
 
 
 class TestAPI(unittest.TestCase):
+	'''Tests for the core functionality'''
 
 	def test_get_file_info(self):
+		'''Get info from sample files and compare to expected output'''
 		file_names = {
 			"Something.Close.12.mp4":
 			None,
@@ -218,6 +222,7 @@ class TestAPI(unittest.TestCase):
 			self.assertEqual(nielsen.get_file_info(path), info)
 
 	def test_filter_series(self):
+		'''Test mapping series to a preferred name'''
 		self.assertEqual(nielsen.filter_series("Castle (2009)"), "Castle")
 		self.assertEqual(nielsen.filter_series("Dc'S Legends Of Tomorrow"),
 			"Legends of Tomorrow")
@@ -234,8 +239,10 @@ class TestAPI(unittest.TestCase):
 
 
 class TestTitles(unittest.TestCase):
+	'''Tests for the titles module'''
 
 	def test_get_series_id(self):
+		'''Test that series names match up with series IDs'''
 		self.assertEqual(nielsen.get_series_id('Agents of SHIELD'), '31')
 		self.assertEqual(nielsen.get_series_id('American Gods'), '3182')
 		self.assertEqual(nielsen.get_series_id('Archer'), '315')
@@ -255,13 +262,14 @@ class TestTitles(unittest.TestCase):
 		self.assertEqual(nielsen.get_series_id('Westworld'), '1371')
 
 	def test_get_episode_title(self):
+		'''Test retrieving episode titles by series name and ID'''
 		self.assertEqual(nielsen.get_episode_title(1, 12, series_id='1851'),
 			'Last Refuge')
 		self.assertEqual(nielsen.get_episode_title(4, 3, series='Castle'),
 			'Head Case')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 	unittest.main()
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
