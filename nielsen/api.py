@@ -5,7 +5,7 @@ chown, chmod, rename, and organize TV show files.
 import argparse
 import logging
 import re
-from os import chmod, makedirs, name, path, rename
+from os import chmod, makedirs, name as os_name, path, rename
 from shutil import chown
 from .titles import get_episode_title
 from .config import CONFIG, load_config, update_series_ids
@@ -148,7 +148,7 @@ def process_file(filename):
 		logging.info("File not found '%s'", filename)
 		return
 
-	if name == "posix":
+	if os_name == 'posix':
 		if CONFIG.get('Options', 'User') or CONFIG.get('Options', 'Group'):
 			try:
 				chown(filename, CONFIG.get('Options', 'User') or None,
@@ -170,6 +170,7 @@ def process_file(filename):
 			info['episode'],
 			info['title'],
 			info['extension'])
+		# Replace invalid filename characters with a hyphen
 		logging.info("Rename to: '%s'", clean)
 
 		# Get the parent directory of the file so the rename operation doesn't
@@ -188,6 +189,20 @@ def process_file(filename):
 
 		if CONFIG.getboolean('Options', 'OrganizeFiles'):
 			organize_file(clean, info['series'], info['season'])
+
+
+def filter_filename(filename):
+	'''Replace invalid characters in a filename with hyphens. The set of
+	invalid characters is determined by the operating system.'''
+	if os_name == 'posix':
+		invalid_chars = re.compile('[/\0]')
+	elif os_name == 'nt':
+		invalid_chars = re.compile('[/\\?%*:|"<>]')
+	else:
+		logging.warning('OS not recognized: %s', os_name)
+		return filename
+
+	return re.sub(invalid_chars, '-', filename)
 
 
 def main():
@@ -225,6 +240,7 @@ def main():
 	PARSER.add_argument("-l", "--log", dest="log_level", type=str,
 		choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
 		help="Logging level")
+	# Files
 	PARSER.add_argument("FILE", nargs="+", type=str, help="File(s) to operate on")
 	ARGS = PARSER.parse_args()
 
