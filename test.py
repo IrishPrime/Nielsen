@@ -2,6 +2,7 @@
 '''Test cases for Nielsen.'''
 
 import unittest
+from unittest.mock import patch
 import nielsen
 
 # Ensure config is loaded regardless of test order
@@ -19,11 +20,11 @@ class TestConfig(unittest.TestCase):
 
 
 class TestAPI(unittest.TestCase):
-	'''Tests for the core functionality'''
+	'''Tests for the core functionality.'''
 
 	def test_get_file_info(self):
-		'''Get info from sample files and compare to expected output'''
-		file_names = {
+		'''Get info from sample files and compare to expected output.'''
+		filenames = {
 			"Something.Close.12.mp4":
 			None,
 
@@ -218,11 +219,11 @@ class TestAPI(unittest.TestCase):
 			},
 		}
 
-		for path, info in file_names.items():
+		for path, info in filenames.items():
 			self.assertEqual(nielsen.get_file_info(path), info)
 
 	def test_filter_series(self):
-		'''Test mapping series to a preferred name'''
+		'''Test mapping series to a preferred name.'''
 		self.assertEqual(nielsen.filter_series("Castle (2009)"), "Castle")
 		self.assertEqual(nielsen.filter_series("Dc'S Legends Of Tomorrow"),
 			"Legends of Tomorrow")
@@ -236,6 +237,13 @@ class TestAPI(unittest.TestCase):
 			"Person of Interest")
 		self.assertEqual(nielsen.filter_series("The Flash (2014)"), "The Flash")
 		self.assertEqual(nielsen.filter_series("The Flash 2014"), "The Flash")
+
+	def test_filter_filename(self):
+		'''Test removing invalid characters from filenames.'''
+		# Invalid characters for POSIX systems
+		self.assertEqual(nielsen.filter_filename(
+			'Brooklyn Nine-Nine -02.20- AC/DC.mp4'),
+			'Brooklyn Nine-Nine -02.20- AC-DC.mp4')
 
 
 class TestTitles(unittest.TestCase):

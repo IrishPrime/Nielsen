@@ -25,11 +25,11 @@ CONFIG['Options'] = {
 }
 
 
-def load_config(file_name=None):
-	'''Load config file specified by file_name, or check XDG directories for
+def load_config(filename=None):
+	'''Load config file specified by filename, or check XDG directories for
 	configuration file.'''
-	if file_name and path.isfile(file_name):
-		config_file = file_name
+	if filename and path.isfile(filename):
+		config_file = filename
 	else:
 		if name == "posix":
 			config_file = ["/etc/xdg/nielsen/nielsen.ini",
@@ -41,14 +41,14 @@ def load_config(file_name=None):
 	return CONFIG.read(config_file)
 
 
-def update_series_ids(file_name=None):
-	'''Add series_ids to IDs section of file_name or default user file.'''
-	# Reloading the config will overwrite existing options from file_name, but
+def update_series_ids(filename=None):
+	'''Add series_ids to IDs section of filename or default user file.'''
+	# Reloading the config will overwrite existing options from filename, but
 	# will not unset newly added options, so the IDs section should be
 	# unaffected by said reload.
-	config_files = load_config(file_name)
-	file_name = config_files[-1]
-	with open(file_name, 'w') as f:
+	config_files = load_config(filename)
+	filename = config_files[-1]
+	with open(filename, 'w') as f:
 		CONFIG.write(f)
 
 
