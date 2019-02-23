@@ -1,0 +1,8 @@
+before_script:
+  - apt-get update -qy
+  - apt-get install -y python3-dev python3-pip
+  - pip3 install .
+
+test:
+  script:
+    - ./setup.py test
