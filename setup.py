@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
 	name='Nielsen',
-	version='1.1.0',
+	version='1.1.2',
 	author="Michael 'Irish' O'Neill",
 	author_email="irish.dot@gmail.com",
 	url='https://github.com/IrishPrime/nielsen/',
@@ -24,6 +24,7 @@ setup(
 		'Programming Language :: Python :: 3.4',
 		'Programming Language :: Python :: 3.5',
 		'Programming Language :: Python :: 3.6',
+		'Programming Language :: Python :: 3.7',
 		'Programming Language :: Python',
 		'Topic :: Desktop Environment :: File Managers',
 		'Topic :: Multimedia :: Video',

@@ -164,12 +164,8 @@ def process_file(filename):
 
 	info = get_file_info(filename)
 	if info:
-		clean = "{0} -{1}.{2}- {3}.{4}".format(
-			info['series'],
-			info['season'],
-			info['episode'],
-			info['title'],
-			info['extension'])
+		clean = "{series} -{season}.{episode}- {title}.{extension}".format(
+				**info)
 		# Replace invalid filename characters with a hyphen
 		logging.info("Rename to: '%s'", clean)
 
