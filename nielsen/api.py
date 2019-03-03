@@ -46,10 +46,10 @@ def get_file_info(filename):
 
 	# Check against patterns until a matching one is found
 	for pattern in patterns:
-		m = pattern.match(path.basename(filename))
-		if m:
+		match = pattern.match(path.basename(filename))
+		if match:
 			# Match found, create a dictionary to hold file information
-			info = m.groupdict(default='')
+			info = match.groupdict(default='')
 
 			info['series'] = info['series'].replace('.', ' ').strip()
 			info['season'] = info['season'].strip().zfill(2)
@@ -132,7 +132,8 @@ def filter_series(series):
 	if CONFIG.has_option('Filters', series):
 		# Return configured name if found
 		return CONFIG.get('Filters', series)
-	elif series.islower():
+
+	if series.islower():
 		# Use title case if everything is lowercase
 		return series.title()
 
