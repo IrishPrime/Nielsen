@@ -7,7 +7,7 @@ import logging
 import re
 from os import chmod, makedirs, name as os_name, path, rename
 from shutil import chown
-from nielsen.titles import get_episode_title
+from nielsen.tv import get_episode_title
 from nielsen.config import CONFIG, load_config, update_series_ids
 
 

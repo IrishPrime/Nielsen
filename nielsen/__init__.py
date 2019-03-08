@@ -17,11 +17,6 @@ from nielsen.config import (
 	update_series_ids,
 )
 
-from nielsen.titles import (
-	get_episode_title,
-	get_series_id,
-)
-
-__all__ = ['api', 'titles', 'config']
+__all__ = ['api', 'tv', 'config']
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
