@@ -3,7 +3,7 @@
 chown, chmod, rename, and organize TV show files.
 '''
 
-from .api import (
+from nielsen.api import (
 	filter_filename,
 	filter_series,
 	get_file_info,
@@ -11,13 +11,13 @@ from .api import (
 	process_file,
 )
 
-from .config import (
+from nielsen.config import (
 	CONFIG,
 	load_config,
 	update_series_ids,
 )
 
-from .titles import (
+from nielsen.titles import (
 	get_episode_title,
 	get_series_id,
 )

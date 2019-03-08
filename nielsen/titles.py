@@ -6,7 +6,7 @@ Fetches information from TVmaze.
 
 import logging
 import requests
-from .config import CONFIG
+from nielsen.config import CONFIG
 
 
 def get_series_id(series):

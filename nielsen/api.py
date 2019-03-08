@@ -7,8 +7,8 @@ import logging
 import re
 from os import chmod, makedirs, name as os_name, path, rename
 from shutil import chown
-from .titles import get_episode_title
-from .config import CONFIG, load_config, update_series_ids
+from nielsen.titles import get_episode_title
+from nielsen.config import CONFIG, load_config, update_series_ids
 
 
 def get_file_info(filename):
