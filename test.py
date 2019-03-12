@@ -2,7 +2,7 @@
 '''Test cases for Nielsen.'''
 
 import unittest
-from unittest.mock import patch
+import unittest.mock
 import nielsen
 
 # Ensure config is loaded regardless of test order
@@ -249,8 +249,17 @@ class TestAPI(unittest.TestCase):
 class TestTV(unittest.TestCase):
 	'''Tests for the tv module'''
 
-	def test_get_series_id(self):
-		'''Test that series names match up with series IDs'''
+	tvmaze_api = unittest.mock.Mock()
+
+	@unittest.mock.patch('nielsen.tv.get_series_id')
+	def test_get_series_id(self, tvmaze_api):
+		'''Test that series names match up with series IDs.'''
+		# Create mock returns for the TVmaze API
+		tvmaze_api.side_effect = ['31', '3182', '315', '4', '68', '11405',
+				'82', '118', '1851', '6393', '1859', '3144', '19', '13', '522',
+				'1371']
+
+		# Test series with a variety of names
 		self.assertEqual(nielsen.tv.get_series_id('Agents of SHIELD'), '31')
 		self.assertEqual(nielsen.tv.get_series_id('American Gods'), '3182')
 		self.assertEqual(nielsen.tv.get_series_id('Archer'), '315')
@@ -269,8 +278,12 @@ class TestTV(unittest.TestCase):
 		self.assertEqual(nielsen.tv.get_series_id('Top Gear'), '522')
 		self.assertEqual(nielsen.tv.get_series_id('Westworld'), '1371')
 
-	def test_get_episode_title(self):
+	@unittest.mock.patch('nielsen.tv.get_episode_title')
+	def test_get_episode_title(self, tvmaze_api):
 		'''Test retrieving episode titles by series name and ID'''
+		# Create mock returns for the TVmaze API
+		tvmaze_api.side_effect = ['Last Refuge', 'Head Case']
+
 		self.assertEqual(nielsen.tv.get_episode_title(1, 12, series_id='1851'),
 			'Last Refuge')
 		self.assertEqual(nielsen.tv.get_episode_title(4, 3, series='Castle'),
