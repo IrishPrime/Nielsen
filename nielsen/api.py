@@ -2,13 +2,12 @@
 '''
 chown, chmod, rename, and organize TV show files.
 '''
-import argparse
 import logging
 import re
 from os import chmod, makedirs, name as os_name, path, rename
 from shutil import chown
 from nielsen.tv import get_episode_title
-from nielsen.config import CONFIG, load_config, update_series_ids
+from nielsen.config import CONFIG
 
 
 def get_file_info(filename):
@@ -200,93 +199,6 @@ def filter_filename(filename):
 		return filename
 
 	return re.sub(invalid_chars, '-', filename)
-
-
-def main():
-	'''Handle command line arguments and run all files through the process_file
-	function.'''
-	# Command line arguments
-	PARSER = argparse.ArgumentParser(description=
-		"Process episodes of TV shows for storage on a media server.")
-	# Config file
-	PARSER.add_argument("-c", "--config", dest="config_file", help="Config file")
-	# Ownership and permissions
-	PARSER.add_argument("-u", "--user", dest="user", help="User to own files")
-	PARSER.add_argument("-g", "--group", dest="group", help="Group to own files")
-	PARSER.add_argument("-m", "--mode", dest="mode", type=str,
-		help="File mode (permissions) in octal")
-	# Organize files
-	group = PARSER.add_mutually_exclusive_group()
-	group.add_argument("-o", "--organize", dest="organize", action="store_const",
-		const='True', help="Organize files")
-	group.add_argument("--no-organize", dest="organize", action="store_const",
-		const='False', help="Do not organize files")
-	# Fetch titles
-	group = PARSER.add_mutually_exclusive_group()
-	group.add_argument("-f", "--fetch", dest="fetch", action="store_const",
-		const='True', help="Fetch titles from the web")
-	group.add_argument("--no-fetch", dest="fetch", action="store_const",
-		const='False', help="Do not fetch titles from the web")
-	# Dry run
-	PARSER.add_argument("-n", "--dry-run", dest="dry_run", action="store_const",
-		const='True', help="Do not rename files, just list the renaming actions.")
-	# Media path
-	PARSER.add_argument("-p", "--path", dest="mediapath",
-		help="Base directory to organize files into")
-	# Logging
-	PARSER.add_argument("-l", "--log", dest="log_level", type=str,
-		choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-		help="Logging level")
-	# Files
-	PARSER.add_argument("FILE", nargs="+", type=str, help="File(s) to operate on")
-	ARGS = PARSER.parse_args()
-
-	# Load configuration
-	load_config(ARGS.config_file)
-
-	# Override the settings in the config file if given on the command line
-	if ARGS.user:
-		CONFIG.set('Options', 'User', ARGS.user)
-
-	if ARGS.group:
-		CONFIG.set('Options', 'Group', ARGS.group)
-
-	if ARGS.mode:
-		CONFIG.set('Options', 'Mode', ARGS.mode)
-
-	if ARGS.organize:
-		CONFIG.set('Options', 'OrganizeFiles', ARGS.organize)
-
-	if ARGS.fetch:
-		CONFIG.set('Options', 'FetchTitles', ARGS.fetch)
-
-	if ARGS.dry_run:
-		CONFIG.set('Options', 'DryRun', ARGS.dry_run)
-
-	if ARGS.mediapath:
-		CONFIG.set('Options', 'MediaPath', ARGS.mediapath)
-
-	if ARGS.log_level:
-		CONFIG.set('Options', 'LogLevel', ARGS.log_level.upper())
-
-	# Configure logging
-	logging.basicConfig(filename=CONFIG.get('Options', 'LogFile'),
-		format='%(asctime)-15s %(levelname)-8s %(message)s',
-		level=getattr(logging, CONFIG.get('Options', 'LogLevel'), 30))
-
-	# Log all configuration options
-	logging.debug(dict(CONFIG.items('Options')))
-
-	# Iterate over files
-	for f in ARGS.FILE:
-		process_file(f)
-
-	# Add series IDs to config file
-	update_series_ids(ARGS.config_file)
-
-
-if __name__ == '__main__':
-	main()
 
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab

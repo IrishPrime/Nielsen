@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
 	name='Nielsen',
-	version='1.1.2',
+	version='2.0.0-alpha',
 	author="Michael 'Irish' O'Neill",
 	author_email="irish.dot@gmail.com",
 	url='https://github.com/IrishPrime/nielsen/',
@@ -33,7 +33,7 @@ setup(
 	install_requires=['requests'],
 	provides=['nielsen'],
 	entry_points={
-		'console_scripts': ['nielsen=nielsen.api:main'],
+		'console_scripts': ['nielsen=bin.cli:main'],
 	},
 	platforms='linux',
 	license='GNU General Public License v3 (GPLv3)',
