@@ -38,6 +38,13 @@ def main():
 	group.add_argument("--no-fetch", dest="fetch", action="store_const",
 		const='False', help="Do not fetch titles from the web")
 
+	# Interactive series selection
+	group = ap.add_mutually_exclusive_group()
+	group.add_argument("-i", "--interactive", dest="interactive",
+		action="store_const", const='True', help="Prompt user when needed")
+	group.add_argument("--no-interactive", dest="interactive",
+		action="store_const", const='False', help="Do not prompt user")
+
 	# Dry run
 	ap.add_argument("-n", "--dry-run", dest="dry_run", action="store_const",
 		const='True', help="Do not rename files, just list the renaming actions.")
@@ -73,6 +80,9 @@ def main():
 
 	if args.fetch:
 		nielsen.config.CONFIG.set('Options', 'FetchTitles', args.fetch)
+
+	if args.interactive:
+		nielsen.config.CONFIG.set('Options', 'Interactive', args.interactive)
 
 	if args.dry_run:
 		nielsen.config.CONFIG.set('Options', 'DryRun', args.dry_run)

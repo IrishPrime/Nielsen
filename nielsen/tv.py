@@ -9,18 +9,46 @@ import requests
 from nielsen.config import CONFIG
 
 
-def get_series_id(series):
+def select_series(series, results):
+	'''Return a series from a list of results.'''
+	if len(results) == 1:
+		# If only one result, use it
+		return results[0]['show']['id']
+
+	print("Search results for '{0}'".format(series))
+	for i, result in enumerate(results):
+		print('{0}. {1} ({2}) - {3}'.format(i, result['show']['name'],
+			result['show']['premiered'], result['show']['id']))
+
+	print('Other input cancels without selection.')
+
+	try:
+		selection = int(input('Select series: '))
+		return results[int(selection)]['show']['id']
+	except (ValueError, IndexError, EOFError) as e:
+		logging.error('Caught exception: %s', e)
+		return None
+
+
+def get_series_id(series, interactive=CONFIG.get('Options', 'Interactive')):
 	'''Return a unique ID for a given series.
 	If an ID isn't found in the config, allow the user to select a match from
 	search results.'''
-	if CONFIG.has_option('IDs', series):
-		# Check config for series ID
-		series_id = CONFIG['IDs'][series]
-	else:
+
+	# Check config for series ID
+	series_id = CONFIG.get('IDs', series, fallback=None)
+
+	if not series_id:
 		# Search for the series
+		if interactive:
+			endpoint = '{0}/search/shows?q={1}'
+		else:
+			endpoint = '{0}/singlesearch/shows?q={1}'
+
+		endpoint = endpoint.format(CONFIG['Options']['ServiceURI'], series)
+
 		try:
-			response = requests.get('{0}search/shows?q={1}'.
-				format(CONFIG['Options']['ServiceURI'], series))
+			response = requests.get(endpoint)
 		except IOError as e:
 			logging.error('Unable to retrieve series names.')
 			logging.debug(e)
@@ -29,25 +57,14 @@ def get_series_id(series):
 		# Get search results as JSON
 		results = response.json()
 
-		if len(results) == 1:
-			# If only one result, use it
-			series_id = results[0]['show']['id']
-		elif len(results) > 1:
-			# If multiple results, display them for selection
-			print("Search results for '{0}'".format(series))
-			for i, result in enumerate(results):
-				print('{0}. {1} ({2}) - {3}'.format(i, result['show']['name'],
-					result['show']['premiered'], result['show']['id']))
-			print('Other input cancels without selection.')
-			try:
-				selection = int(input('Select series: '))
-				series_id = results[int(selection)]['show']['id']
-			except (ValueError, IndexError, EOFError) as e:
-				logging.error('Caught exception: %s', e)
-				return None
-		else:
-			# No results
-			series_id = None
+		if response.status_code == 200:
+			# Only check successful responses
+			if not interactive:
+				# The results are structured differently in non-interactive mode
+				series_id = results['id']
+			else:
+				# Interactive selection if required
+				series_id = select_series(series, results)
 
 	logging.info("Show ID for '%s': %s", series, series_id)
 

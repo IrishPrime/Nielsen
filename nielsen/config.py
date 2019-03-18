@@ -15,6 +15,7 @@ CONFIG['Options'] = {
 	'User': '',
 	'Group': '',
 	'Mode': '644',
+	'Interactive': 'False',
 	'LogFile': 'nielsen.log',
 	'LogLevel': 'WARNING',
 	'MediaPath': '',
@@ -27,7 +28,7 @@ CONFIG['Options'] = {
 
 def load_config(filename=None):
 	'''Load config file specified by filename, or check XDG directories for
-	configuration file.'''
+	configuration files.'''
 	if filename and path.isfile(filename):
 		config_file = filename
 	else:
