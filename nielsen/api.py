@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
+
 '''
 chown, chmod, rename, and organize TV show files.
 '''
+
 import logging
 import re
-from os import chmod, makedirs, name as os_name, path, rename
-from shutil import chown
+import pathlib
+from os import name as os_name
+import nielsen.files
 from nielsen.tv import get_episode_title
 from nielsen.config import CONFIG
 
 
-def get_file_info(filename):
+def get_file_info(file):
 	'''Get information about an episode from its filename.
 	Returns a dictionary with the following keys:
 		- series: Series name
@@ -26,6 +29,9 @@ def get_file_info(filename):
 		The Glades -201- Family Matters.avi
 		Bones.S04E01E02.720p.HDTV.X264-DIMENSION.mkv
 	'''
+	if not isinstance(file, pathlib.Path):
+		file = pathlib.PurePath(file)
+
 	patterns = [
 		# The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4
 		re.compile(r"(?P<series>.+)\.+(?P<year>\d{4})\.(?P<season>\d{1,2})(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$", re.IGNORECASE),
@@ -45,7 +51,7 @@ def get_file_info(filename):
 
 	# Check against patterns until a matching one is found
 	for pattern in patterns:
-		match = pattern.match(path.basename(filename))
+		match = pattern.match(file.name)
 		if match:
 			# Match found, create a dictionary to hold file information
 			info = match.groupdict(default='')
@@ -87,34 +93,27 @@ def get_file_info(filename):
 			return info
 
 	# Filename didn't match any pattern in the list
-	logging.info('%s did not match any pattern, skipping.', filename)
+	logging.info('%s did not match any pattern, skipping.', file)
 	return None
 
 
 def organize_file(filename, series, season):
-	'''Move files to <MediaPath>/<Series>/Season <Season>.'''
-	if CONFIG.get('Options', 'MediaPath'):
-		new_path = path.join(CONFIG.get('Options', 'MediaPath'), series,
-			"Season {0}".format(season))
-		logging.debug('Creating and/or moving to: %s', new_path)
-		makedirs(new_path, exist_ok=True)
-
-		dst = path.join(new_path, path.basename(filename))
-
-		# Do not attempt to overwrite existing files
-		if path.isfile(dst):
-			logging.warning('%s already exists. File will not be moved.', dst)
-		else:
-			try:
-				rename(filename, dst)
-				logging.info('Moved to %s', dst)
-			except OSError as err:
-				logging.error(err)
-
-		return new_path
-	else:
-		logging.error("No MediaPath defined.")
+	'''Move files to <MediaPath>/<Series>/Season <Season>. Returns a Path
+	object representing the new location, or None on failure.'''
+	if not CONFIG.has_option('Options', 'MediaPath'):
+		# If the MediaPath is not defined, abort
+		logging.error('No MediaPath defined.')
 		return None
+
+	# Establish paths to work with
+	mediapath = pathlib.PurePath(CONFIG.get('Options', 'MediaPath'))
+	src = pathlib.Path(filename)
+	dst = pathlib.Path(mediapath / series / f'Season {season}' / src.name)
+
+	nielsen.files.create_hierarchy(dst)
+	nielsen.files.move(src, dst)
+
+	return dst
 
 
 def filter_series(series):
@@ -141,50 +140,50 @@ def filter_series(series):
 
 
 def process_file(filename):
-	'''Set ownership and permissions for files, then rename.'''
-	if path.exists(filename):
+	'''Set ownership and permissions for files, then rename, and optionally
+	organize.'''
+	file = pathlib.Path(filename)
+
+	if file.exists():
 		logging.info("Processing '%s'", filename)
 	else:
 		logging.info("File not found '%s'", filename)
-		return
+		return file
 
-	if os_name == 'posix':
-		if CONFIG.get('Options', 'User') or CONFIG.get('Options', 'Group'):
-			try:
-				chown(filename, CONFIG.get('Options', 'User') or None,
-					CONFIG.get('Options', 'Group') or None)
-			except PermissionError as err:
-				logging.error("chown failed. %s", err)
+	# Attempt to set file ownership and mode on POSIX systems
+	if isinstance(file, pathlib.PosixPath):
+		nielsen.files.set_file_ownership(file)
+		nielsen.files.set_file_mode(file)
 
-		if CONFIG.get('Options', 'Mode'):
-			try:
-				chmod(filename, int(CONFIG.get('Options', 'Mode'), 8))
-			except PermissionError as err:
-				logging.error("chmod failed. %s", err)
-
-	info = get_file_info(filename)
+	# Attempt to extract file information from filename
+	info = get_file_info(file)
 	if info:
-		clean = "{series} -{season}.{episode}- {title}.{extension}".format(
-				**info)
-		# Replace invalid filename characters with a hyphen
-		logging.info("Rename to: '%s'", clean)
+		# Define a format for the renamed file
+		form = "{series} -{season}.{episode}- {title}.{extension}"
+		# Generate the new filename
+		name = filter_filename(form.format(**info))
+		logging.info("Rename to: '%s'", name)
 
-		# Get the parent directory of the file so the rename operation doesn't
-		# move it unintentionally
-		parent = path.dirname(filename)
-		clean = path.join(parent, clean)
+		# Create a PurePath object to reference the renamed file to check for
+		# existence and make renaming more straightforward
+		clean = pathlib.PurePath(file.parent / name)
 
 		if CONFIG.getboolean('Options', 'DryRun'):
-			print(filename + " → " + clean)
-			return
+			print(f'{file} → {clean}')
+			return file
 
-		if path.isfile(clean):
+		if file == clean:
+			# Both Path objects refer to the same file, do nothing
 			logging.warning("%s already exists. File will not be renamed.", clean)
 		else:
-			rename(filename, clean)
+			# Rename file in-place, updating Path object
+			file = file.rename(clean)
 
 		if CONFIG.getboolean('Options', 'OrganizeFiles'):
-			organize_file(clean, info['series'], info['season'])
+			# Move file to appropiate location under MediaPath
+			file = organize_file(file, info['series'], info['season'])
+
+	return file
 
 
 def filter_filename(filename):
