@@ -95,7 +95,7 @@ def main():
 
 	# Configure logging
 	logging.basicConfig(filename=nielsen.config.CONFIG.get('Options', 'LogFile'),
-		format='%(asctime)-15s %(levelname)-8s %(message)s',
+		format='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
 		level=getattr(logging, nielsen.config.CONFIG.get('Options', 'LogLevel'), 30))
 
 	# Log all configuration options
