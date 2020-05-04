@@ -17,6 +17,6 @@ from nielsen.config import (
 	update_series_ids,
 )
 
-__all__ = ['api', 'tv', 'config']
+__all__ = ['api', 'config', 'files', 'tv']
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab

@@ -222,6 +222,7 @@ class TestAPI(unittest.TestCase):
 		for path, info in filenames.items():
 			self.assertEqual(nielsen.get_file_info(path), info)
 
+
 	def test_filter_series(self):
 		'''Test mapping series to a preferred name.'''
 		self.assertEqual(nielsen.filter_series("Castle (2009)"), "Castle")
@@ -237,6 +238,7 @@ class TestAPI(unittest.TestCase):
 			"Person of Interest")
 		self.assertEqual(nielsen.filter_series("The Flash (2014)"), "The Flash")
 		self.assertEqual(nielsen.filter_series("The Flash 2014"), "The Flash")
+
 
 	def test_filter_filename(self):
 		'''Test removing invalid characters from filenames.'''
@@ -292,5 +294,6 @@ class TestTV(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
+
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
