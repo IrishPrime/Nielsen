@@ -126,17 +126,9 @@ def filter_series(series):
 		Its Always Sunny In Philadelphia = It's Always Sunny in Philadelphia
 		Marvel's Agents of S.H.I.E.L.D. = Agents of S.H.I.E.L.D.
 		Mr Robot = Mr. Robot
+	If no filter is found, return the original string in title case.
 	'''
-	if CONFIG.has_option('Filters', series):
-		# Return configured name if found
-		return CONFIG.get('Filters', series)
-
-	if series.islower():
-		# Use title case if everything is lowercase
-		return series.title()
-
-	# Return original input if nothing to do
-	return series
+	return CONFIG.get('Filters', series, fallback=series.title())
 
 
 def process_file(filename):
@@ -161,7 +153,7 @@ def process_file(filename):
 		# Define a format for the renamed file
 		form = "{series} -{season}.{episode}- {title}.{extension}"
 		# Generate the new filename
-		name = filter_filename(form.format(**info))
+		name = sanitize_filename(form.format(**info))
 		logging.info("Rename to: '%s'", name)
 
 		# Create a PurePath object to reference the renamed file to check for
@@ -186,12 +178,16 @@ def process_file(filename):
 	return file
 
 
-def filter_filename(filename):
-	'''Replace invalid characters in a filename with hyphens. The set of
-	invalid characters is determined by the operating system.'''
-	if os_name == 'posix':
+def sanitize_filename(filename, system_type=os_name):
+	'''Replace characters which are invalid for a file basename in the string
+	`filename` with hyphens. The set of invalid characters is determined by the
+	operating system. For example, an episode title of `AC/DC` would cause the
+	operating system to treat everything before the forward-slash as another
+	directory. This function returns the same string as provided, but with an
+	episode title token of `AC-DC`.'''
+	if system_type == 'posix':
 		invalid_chars = re.compile('[/\0]')
-	elif os_name == 'nt':
+	elif system_type == 'nt':
 		invalid_chars = re.compile('[/\\?%*:|"<>]')
 	else:
 		logging.warning('OS not recognized: %s', os_name)
