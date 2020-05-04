@@ -59,12 +59,12 @@ def get_series_id(series, interactive=CONFIG.get('Options', 'Interactive')):
 
 		if response.status_code == 200:
 			# Only check successful responses
-			if not interactive:
-				# The results are structured differently in non-interactive mode
-				series_id = results['id']
-			else:
+			if interactive:
 				# Interactive selection if required
 				series_id = select_series(series, results)
+			else:
+				# The results are structured differently in non-interactive mode
+				series_id = results['id']
 
 	logging.info("Show ID for '%s': %s", series, series_id)
 
