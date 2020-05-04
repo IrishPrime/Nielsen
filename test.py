@@ -240,10 +240,10 @@ class TestAPI(unittest.TestCase):
 		self.assertEqual(nielsen.filter_series("The Flash 2014"), "The Flash")
 
 
-	def test_filter_filename(self):
+	def test_sanitize_filename(self):
 		'''Test removing invalid characters from filenames.'''
 		# Invalid characters for POSIX systems
-		self.assertEqual(nielsen.filter_filename(
+		self.assertEqual(nielsen.sanitize_filename(
 			'Brooklyn Nine-Nine -02.20- AC/DC.mp4'),
 			'Brooklyn Nine-Nine -02.20- AC-DC.mp4')
 
