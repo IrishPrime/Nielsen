@@ -23,6 +23,7 @@ CONFIG['Options'] = {
 	'DryRun': 'False',
 	'FetchTitles': 'False',
 	'ServiceURI': 'http://api.tvmaze.com/',
+	'Format': '{series} -{season}.{episode}- {title}.{extension}',
 }
 
 
