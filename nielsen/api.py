@@ -151,7 +151,7 @@ def process_file(filename):
 	info = get_file_info(file)
 	if info:
 		# Define a format for the renamed file
-		form = "{series} -{season}.{episode}- {title}.{extension}"
+		form = CONFIG.get('Options', 'Format')
 		# Generate the new filename
 		name = sanitize_filename(form.format(**info))
 		logging.info("Rename to: '%s'", name)
