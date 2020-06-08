@@ -42,7 +42,7 @@ def get_file_info(file):
 		# The Glades -02.01- Family Matters.avi
 		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{2})\.(?P<episode>\d{2})-\s*(?P<title>.*)\.(?P<extension>.+)$"),
 		# The Glades -201- Family Matters.avi
-		re.compile(r"(?P<series>.+)\s+-(?P<season>\d{1,2})(?P<episode>\d{2,})-\s*(?P<title>.*)\.(?P<extension>.+)$"),
+		re.compile(r"(?P<series>.+[^\s-])[\s-]+(?P<season>\d{1,2})(?P<episode>\d{2,})[\s-]+(?P<title>.*)\.(?P<extension>.+)$"),
 		# Last ditch effort to get essential information
 		re.compile(r"(?P<series>.+)S(?P<season>\d{1,2})E(?P<episode>\d{2,}).*\.(?P<extension>.+)$"),
 	]

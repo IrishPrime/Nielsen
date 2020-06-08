@@ -73,6 +73,15 @@ class TestAPI(unittest.TestCase):
 				"extension": "avi"
 			},
 
+			# Four digit season/episode code, fewer hyphens
+			"Firefly 0101 - Serenity.mkv": {
+				"series": "Firefly",
+				"season": "01",
+				"episode": "01",
+				"title": "Serenity",
+				"extension": "mkv"
+			},
+
 			# Has most necessary information, but formatted strangely
 			"Supernatural.S10E15.mp4": {
 				"series": "Supernatural",
