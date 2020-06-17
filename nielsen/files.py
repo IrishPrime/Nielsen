@@ -27,7 +27,6 @@ def set_file_ownership(file):
 		try:
 			chown(file, CONFIG.get('Options', 'User') or None,
 				CONFIG.get('Options', 'Group') or None)
-			status = True
 		except PermissionError as err:
 			logging.error("chown failed. %s", err)
 			raise

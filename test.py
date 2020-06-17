@@ -3,6 +3,8 @@
 
 import unittest
 import unittest.mock
+import pathlib
+import tempfile
 import nielsen
 
 # Ensure config is loaded regardless of test order
@@ -255,6 +257,25 @@ class TestAPI(unittest.TestCase):
 		self.assertEqual(nielsen.sanitize_filename(
 			'Brooklyn Nine-Nine -02.20- AC/DC.mp4'),
 			'Brooklyn Nine-Nine -02.20- AC-DC.mp4')
+
+
+	def test_organize_file(self):
+		'''Test for the correct file path/hierarchy.'''
+		series = 'Firefly'
+		season = '01'
+		filename = "Firefly -01.01- Serenity.mkv"
+
+		# Set the MediaPath to a temporary directory to avoid conflicting with
+		# real file paths. Set the dryrun argument to True to avoid modifying
+		# the filesystem. Test the filesystem afterwards to confirm no
+		# directories were created.
+		with tempfile.TemporaryDirectory() as tmp:
+			nielsen.CONFIG.set('Options', 'MediaPath', tmp)
+			dst = nielsen.organize_file(filename, 'Firefly', '01', True)
+			self.assertEqual(
+				pathlib.PurePath(tmp, series, f'Season {season}', filename),
+				dst)
+			self.assertFalse(dst.parent.exists())
 
 
 class TestTV(unittest.TestCase):
