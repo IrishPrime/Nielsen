@@ -97,7 +97,7 @@ def get_file_info(file):
 	return None
 
 
-def organize_file(filename, series, season):
+def organize_file(filename, series, season, dryrun=CONFIG.getboolean('Options', 'DryRun')):
 	'''Move files to <MediaPath>/<Series>/Season <Season>. Returns a Path
 	object representing the new location, or None on failure.'''
 	if not CONFIG.has_option('Options', 'MediaPath'):
@@ -110,8 +110,9 @@ def organize_file(filename, series, season):
 	src = pathlib.Path(filename)
 	dst = pathlib.Path(mediapath / series / f'Season {season}' / src.name)
 
-	nielsen.files.create_hierarchy(dst)
-	nielsen.files.move(src, dst)
+	if not dryrun:
+		nielsen.files.create_hierarchy(dst)
+		nielsen.files.move(src, dst)
 
 	return dst
 
@@ -131,7 +132,7 @@ def filter_series(series):
 	return CONFIG.get('Filters', series, fallback=series.title())
 
 
-def process_file(filename):
+def process_file(filename, dryrun=CONFIG.getboolean('Options', 'DryRun')):
 	'''Set ownership and permissions for files, then rename, and optionally
 	organize.'''
 	file = pathlib.Path(filename)
@@ -143,7 +144,7 @@ def process_file(filename):
 		return file
 
 	# Attempt to set file ownership and mode on POSIX systems
-	if isinstance(file, pathlib.PosixPath):
+	if isinstance(file, pathlib.PosixPath) and not dryrun:
 		nielsen.files.set_file_ownership(file)
 		nielsen.files.set_file_mode(file)
 
@@ -160,7 +161,7 @@ def process_file(filename):
 		# existence and make renaming more straightforward
 		clean = pathlib.PurePath(file.parent / name)
 
-		if CONFIG.getboolean('Options', 'DryRun'):
+		if dryrun:
 			print(f'{file} → {clean}')
 			return file
 
@@ -173,7 +174,7 @@ def process_file(filename):
 
 		if CONFIG.getboolean('Options', 'OrganizeFiles'):
 			# Move file to appropiate location under MediaPath
-			file = organize_file(file, info['series'], info['season'])
+			file = organize_file(file, info['series'], info['season'], dryrun)
 
 	return file
 
