@@ -38,6 +38,13 @@ def main():
 	group.add_argument("--no-fetch", dest="fetch", action="store_const",
 		const='False', help="Do not fetch titles from the web")
 
+	# Filter series
+	group = ap.add_mutually_exclusive_group()
+	group.add_argument("--filter", dest="filter", action="store_const",
+		const='True', help="Replace series name with user-defined alternative or title-case")
+	group.add_argument("--no-filter", dest="filter", action="store_const",
+		const='False', help="Do not modify series names")
+
 	# Interactive series selection
 	group = ap.add_mutually_exclusive_group()
 	group.add_argument("-i", "--interactive", dest="interactive",
@@ -66,11 +73,26 @@ def main():
 	nielsen.config.load_config(args.config_file)
 
 	# Override the settings in the config file if given on the command line
-	if args.user:
-		nielsen.config.CONFIG.set('Options', 'User', args.user)
+	if args.dry_run:
+		nielsen.config.CONFIG.set('Options', 'DryRun', args.dry_run)
+
+	if args.fetch:
+		nielsen.config.CONFIG.set('Options', 'FetchTitles', args.fetch)
+
+	if args.filter:
+		nielsen.config.CONFIG.set('Options', 'FilterSeries', args.filter)
 
 	if args.group:
 		nielsen.config.CONFIG.set('Options', 'Group', args.group)
+
+	if args.interactive:
+		nielsen.config.CONFIG.set('Options', 'Interactive', args.interactive)
+
+	if args.log_level:
+		nielsen.config.CONFIG.set('Options', 'LogLevel', args.log_level.upper())
+
+	if args.mediapath:
+		nielsen.config.CONFIG.set('Options', 'MediaPath', args.mediapath)
 
 	if args.mode:
 		nielsen.config.CONFIG.set('Options', 'Mode', args.mode)
@@ -78,20 +100,8 @@ def main():
 	if args.organize:
 		nielsen.config.CONFIG.set('Options', 'OrganizeFiles', args.organize)
 
-	if args.fetch:
-		nielsen.config.CONFIG.set('Options', 'FetchTitles', args.fetch)
-
-	if args.interactive:
-		nielsen.config.CONFIG.set('Options', 'Interactive', args.interactive)
-
-	if args.dry_run:
-		nielsen.config.CONFIG.set('Options', 'DryRun', args.dry_run)
-
-	if args.mediapath:
-		nielsen.config.CONFIG.set('Options', 'MediaPath', args.mediapath)
-
-	if args.log_level:
-		nielsen.config.CONFIG.set('Options', 'LogLevel', args.log_level.upper())
+	if args.user:
+		nielsen.config.CONFIG.set('Options', 'User', args.user)
 
 	# Configure logging
 	logging.basicConfig(filename=nielsen.config.CONFIG.get('Options', 'LogFile'),
@@ -103,7 +113,7 @@ def main():
 
 	# Iterate over files
 	for f in args.FILE:
-		nielsen.api.process_file(f)
+		nielsen.api.process_file(f, args.dry_run)
 
 	# Add series IDs to config file
 	nielsen.config.update_series_ids(args.config_file)

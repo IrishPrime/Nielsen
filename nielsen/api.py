@@ -64,7 +64,8 @@ def get_file_info(file):
 			info['title'] = info.get('title', '').replace('.', ' ').strip()
 
 			# Check series name against filter
-			info['series'] = filter_series(info['series'])
+			if CONFIG.getboolean('Options', 'FilterSeries'):
+				info['series'] = filter_series(info['series'])
 
 			# Strip tags and release notes from the episode title
 			info['title'] = re.sub(tags, "", info['title']).strip()
@@ -172,8 +173,9 @@ def process_file(filename, dryrun=CONFIG.getboolean('Options', 'DryRun')):
 			# Rename file in-place, updating Path object
 			file = file.rename(clean)
 
-		if CONFIG.getboolean('Options', 'OrganizeFiles'):
+		if CONFIG.getboolean('Options', 'OrganizeFiles') and not dryrun:
 			# Move file to appropiate location under MediaPath
+			logging.info('Organizing %s', filename)
 			file = organize_file(file, info['series'], info['season'], dryrun)
 
 	return file

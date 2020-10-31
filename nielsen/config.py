@@ -12,18 +12,19 @@ CONFIG.add_section('Options')
 CONFIG.add_section('Filters')
 CONFIG.add_section('IDs')
 CONFIG['Options'] = {
-	'User': '',
+	'DryRun': 'False',
+	'FetchTitles': 'False',
+	'FilterSeries': 'True',
+	'Format': '{series} -{season}.{episode}- {title}.{extension}',
 	'Group': '',
-	'Mode': '644',
 	'Interactive': 'False',
 	'LogFile': 'nielsen.log',
 	'LogLevel': 'WARNING',
 	'MediaPath': '',
+	'Mode': '644',
 	'OrganizeFiles': 'False',
-	'DryRun': 'False',
-	'FetchTitles': 'False',
 	'ServiceURI': 'http://api.tvmaze.com/',
-	'Format': '{series} -{season}.{episode}- {title}.{extension}',
+	'User': '',
 }
 
 
