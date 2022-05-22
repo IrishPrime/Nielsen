@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-
 '''
 chown, chmod, rename, and organize TV show files.
 '''
-
 import logging
-import re
 import pathlib
+import re
 from os import name as os_name
+
 import nielsen.files
-from nielsen.tv import get_episode_title
 from nielsen.config import CONFIG
+from nielsen.tv import get_episode_title
 
 
 def get_file_info(file):
@@ -189,7 +188,7 @@ def sanitize_filename(filename, system_type=os_name):
 	directory. This function returns the same string as provided, but with an
 	episode title token of `AC-DC`.'''
 	if system_type == 'posix':
-		invalid_chars = re.compile('[/\0]')
+		invalid_chars = re.compile('[/\0:?]')
 	elif system_type == 'nt':
 		invalid_chars = re.compile('[/\\?%*:|"<>]')
 	else:
