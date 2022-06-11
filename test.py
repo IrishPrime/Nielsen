@@ -6,8 +6,10 @@ import pathlib
 import unittest
 from configparser import ConfigParser
 from unittest import mock
+from typing import Any
 
 import nielsen.config
+import nielsen.media
 
 logger: logging.Logger = logging.getLogger("nielsen")
 logger.addHandler(logging.NullHandler())
@@ -99,6 +101,125 @@ class TestConfig(unittest.TestCase):
         self.assertTrue(file.is_file(), f"{file} must exist as a file after writing.")
         self.assertGreater(
             file.stat().st_size, 100, f"{file} must have some data in it."
+        )
+
+
+class TestTV(unittest.TestCase):
+    """Test the TV class."""
+
+    def setUp(self):
+        """Prepare references objects for tests."""
+
+        self.wot_good_filename: nielsen.media.Media = nielsen.media.TV(
+            "The Wheel of Time -01.08- The Eye of the World.mkv"
+        )
+        self.wot_good_metadata: nielsen.media.Media = nielsen.media.TV(
+            "wot.mkv",
+            series="The Wheel of Time",
+            season=1,
+            episode=8,
+            title="The Eye of the World",
+        )
+        self.wot_all_data: nielsen.media.Media = nielsen.media.TV(
+            "The Wheel of Time -01.08- The Eye of the World.mkv",
+            series="The Wheel of Time",
+            season=1,
+            episode=8,
+            title="The Eye of the World",
+        )
+
+    def test_init(self):
+        """Type conversion from the base class should happen in the subclass, as well."""
+
+        falsey: list[Any] = [None, False, 0, ""]
+        for item in falsey:
+            with self.subTest("Falsey path values should convert to None", item=item):
+                tv_none_path: nielsen.media.TV = nielsen.media.TV(item)
+                self.assertIsNone(tv_none_path.path)
+
+        valid_paths: list[nielsen.media.Media] = [
+            self.wot_good_filename,
+            self.wot_good_metadata,
+            self.wot_all_data,
+        ]
+        for item in valid_paths:
+            with self.subTest("Paths and strings should become paths", item=item):
+                self.assertIsInstance(item.path, pathlib.Path)
+
+    def test_ordering(self):
+        """Items should be sorted by season, then episode number."""
+
+        self.assertGreater(
+            nielsen.media.TV(None, season=1, episode=2),
+            nielsen.media.TV(None, season=1, episode=1),
+            "Same season, different episode numbers",
+        )
+
+        self.assertGreater(
+            nielsen.media.TV("Show -02.01- Title.mkv", season=2, episode=1),
+            nielsen.media.TV("Show -01.01- Title.mkv", season=1, episode=1),
+            "Different seasons, same episode number",
+        )
+
+        self.assertGreater(
+            nielsen.media.TV(None, season=2, episode=2),
+            nielsen.media.TV(None, season=1, episode=10),
+            "Different seasons and episode numbers",
+        )
+
+        self.assertLessEqual(
+            nielsen.media.TV(None, season=3, episode=4),
+            nielsen.media.TV(None, season=3, episode=4),
+            "Same season and episode number",
+        )
+
+        self.assertGreaterEqual(
+            nielsen.media.TV(None, season=4, episode=5),
+            nielsen.media.TV(None, season=4, episode=5),
+            "Same season and episode number",
+        )
+
+        self.assertEqual(
+            nielsen.media.TV(None, season=4, episode=5),
+            nielsen.media.TV(None, season=4, episode=5),
+            "Same season and episode number",
+        )
+
+    def test_str(self):
+        """The string representation should provide a useful display name."""
+
+        self.assertEqual(
+            "The Wheel of Time -01.08- The Eye of the World",
+            str(self.wot_all_data),
+            "TV object with all data",
+        )
+        self.assertEqual(
+            "The Wheel of Time -01.08- The Eye of the World",
+            str(self.wot_good_metadata),
+            "TV object with all metadata",
+        )
+
+    def test_infer(self):
+        """A descriptive filename should populate the metadata."""
+
+        self.assertNotEqual(
+            self.wot_good_filename,
+            self.wot_all_data,
+            "Objects should differ before infer is called",
+        )
+        self.wot_good_filename.infer()
+        self.assertEqual(
+            self.wot_good_filename,
+            self.wot_all_data,
+            "Objects should be identical after infer is called",
+        )
+
+    def test_organize(self):
+        """Organizing an object should return its new path."""
+
+        self.assertEqual(
+            pathlib.Path(f"/tmp/organized/{self.wot_all_data}"),
+            self.wot_all_data.organize(),
         )
 
 

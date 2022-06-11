@@ -30,4 +30,30 @@ class Media(ABC):
         """Move the file to the appropriate media library on disk."""
 
 
+@dataclass(order=True, slots=True)
+class TV(Media):
+    """A class just for TV shows."""
+
+    series: str = ""
+    season: int = 0
+    episode: int = 0
+    title: str = ""
+
+    def infer(self):
+        self.series = "The Wheel of Time"
+        self.season = 1
+        self.episode = 8
+        self.title = "The Eye of the World"
+
+    def organize(self) -> pathlib.Path:
+        """Move the file to the TV media library location."""
+        return pathlib.Path(f"/tmp/organized/{self}")
+
+    def __str__(self) -> str:
+        """Return a friendly, human-readable version of the file metadata, fit for
+        renaming or display purposes."""
+
+        return f"{self.series} -{self.season:02d}.{self.episode:02d}- {self.title}"
+
+
 # vim: et ts=4 sts=4 sw=4
