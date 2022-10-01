@@ -15,6 +15,7 @@ def load_config(path: Optional[pathlib.Path] = None) -> ConfigParser:
         config.read(
             [
                 "/etc/nielsen/config.ini",
+                pathlib.Path("~/.config/nielsen/config.ini").expanduser(),
                 pathlib.Path("~/.nielsen/config.ini").expanduser(),
             ]
         )
@@ -26,6 +27,9 @@ def load_config(path: Optional[pathlib.Path] = None) -> ConfigParser:
 
 def write_config(path: pathlib.Path) -> None:
     """Write the global configuration object to the given `path`."""
+
+    with open(path, "w") as fp:
+        config.write(fp)
 
 
 # vim: et ts=4 sts=4 sw=4
