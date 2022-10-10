@@ -8,23 +8,35 @@ from typing import Optional
 logger: logging.Logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-config: ConfigParser = ConfigParser()
+config: ConfigParser = ConfigParser(converters={"path": pathlib.Path})
+# Set default options
+config["DEFAULT"] = {
+    # Dry Run - Outputs results without actually modifying files
+    "dryrun": "False",
+    # Fetch - Whether to query remote sources for information
+    "fetch": "True",
+    # Filter - Whether to refer to the <type>/filter section when organizing Media
+    "filter": "True",
+    # Interactive - Whether to prompt the user to make decisions while processing
+    "interactive": "True",
+    # Library - The directory under which Media should be organized
+    "library": str(pathlib.Path.home()),
+    # LogFile - The file to which log messages should be written
+    "logfile": "~/.local/log/nielsen/nielsen.log",
+    # LogLevel - The minimum log-level to display
+    "loglevel": "WARNING",
+    # Mode - The file mode (permissions) to set on Media files during processing
+    "mode": "664",
+    # Organize - Whether to move Media to its library directory
+    "organize": "True",
+    # Rename - Whether to rename individual Media files
+    "rename": "True",
+}
 
 
 def load_config(path: Optional[pathlib.Path] = None) -> ConfigParser:
     """Load a configuration from a file. If no file path is provided, default
     configuration file locations are used. Returns a ConfigParser object."""
-
-    # Set some default options
-    config.set(config.default_section, "dryrun", "False")
-    config.set(config.default_section, "fetch", "True")
-    config.set(config.default_section, "filter", "True")
-    config.set(config.default_section, "interactive", "True")
-    config.set(config.default_section, "logfile", "~/.local/log/nielsen/nielsen.log")
-    config.set(config.default_section, "loglevel", "WARNING")
-    config.set(config.default_section, "mediapath", str(pathlib.Path.home()))
-    config.set(config.default_section, "mode", "664")
-    config.set(config.default_section, "organize", "True")
 
     if not path:
         files: list[str] = config.read(
@@ -48,8 +60,8 @@ def load_config(path: Optional[pathlib.Path] = None) -> ConfigParser:
 def write_config(path: pathlib.Path) -> None:
     """Write the global configuration object to the given `path`."""
 
-    with open(path, "w") as fp:
-        config.write(fp)
+    with open(path, mode="w") as file:
+        config.write(file)
 
 
-# vim: et ts=4 sts=4 sw=4
+# vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab

@@ -4,6 +4,7 @@
 import logging
 import pathlib
 import unittest
+import unittest.util
 from configparser import ConfigParser
 from unittest import mock
 from typing import Any
@@ -11,8 +12,10 @@ from typing import Any
 import nielsen.config
 import nielsen.media
 
+unittest.util._MAX_LENGTH = 2000
+
 logger: logging.Logger = logging.getLogger("nielsen")
-logger.addHandler(logging.NullHandler())
+# logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.DEBUG)
 
 
@@ -20,9 +23,14 @@ class TestConfig(unittest.TestCase):
     """Test the nielsen.config module."""
 
     def setUp(self):
-        """Empty the config before each test."""
+        """Clear the config to avoid execution order complications."""
 
         self.config: ConfigParser = nielsen.config.config
+        self.config.clear()
+
+    def tearDown(self):
+        """Clear the config to avoid execution order complications."""
+
         self.config.clear()
 
     @mock.patch("nielsen.config.config.read")
@@ -46,11 +54,12 @@ class TestConfig(unittest.TestCase):
             "fetch": "True",
             "filter": "True",
             "interactive": "True",
+            "library": str(pathlib.Path.home()),
             "logfile": "~/.local/log/nielsen/nielsen.log",
             "loglevel": "WARNING",
-            "mediapath": str(pathlib.Path.home()),
             "mode": "664",
             "organize": "True",
+            "rename": "True",
         }
 
         self.config.add_section("test section")
@@ -104,29 +113,205 @@ class TestConfig(unittest.TestCase):
         )
 
 
+class TestMedia(unittest.TestCase):
+    """Test the nielsen.media.Media base class."""
+
+    def setUp(self):
+        """Prepare reference objects for tests."""
+
+        self.config: ConfigParser = nielsen.config.config
+        nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
+
+        self.no_path: nielsen.media.Media = nielsen.media.Media()
+        self.non_file_path: nielsen.media.Media = nielsen.media.TV(
+            pathlib.Path("/dev/null")
+        )
+        self.good_path: nielsen.media.Media = nielsen.media.Media(
+            pathlib.Path("fixtures/media.file")
+        )
+
+    def tearDown(self):
+        """Clean up after each test."""
+
+        self.config.clear()
+
+    def test_init(self):
+        """Test construction of new Media objects."""
+
+        self.assertIsNone(self.no_path.path, "No path attribute set by default.")
+        self.assertEqual(
+            self.no_path.section, "media", "Section attribute based on type."
+        )
+        # The library attribute must be a path, but the default value isn't especially
+        # important for generic Media objects.
+        self.assertIsInstance(
+            self.no_path.library, pathlib.Path, "Library attribute must be a Path."
+        )
+        self.assertTrue(
+            self.no_path.library.is_absolute(), "Library should be an absolute path."
+        )
+
+    def test_infer(self):
+        """Cannot use infer on the base Media class."""
+
+        with self.assertRaises(NotImplementedError):
+            self.good_path.infer()
+
+    def test_get_section(self):
+        """The section property should return a value based on the type."""
+
+        self.assertEqual(
+            self.no_path.section, "media", "The section should match the type name"
+        )
+
+    def test_set_section(self):
+        """Set the section property."""
+
+        existing_section: str = "unit tests"
+        self.no_path.section = existing_section
+        self.assertEqual(
+            self.no_path.section,
+            existing_section,
+            "The section should match the existing section assigned to it",
+        )
+
+        new_section: str = "new section"
+        self.no_path.section = new_section
+        self.assertEqual(
+            self.no_path.section,
+            new_section,
+            "The section should match the newly created section assigned to it",
+        )
+        self.assertTrue(
+            self.config.has_section(new_section),
+            "The new section should be added to the config",
+        )
+
+    def test_get_library(self):
+        """Get the library property from the appropriate config section."""
+
+        # Calling resolve on the Path we compare to also ensures the library property is
+        # always an absolute path.
+        self.assertEqual(
+            self.no_path.library,
+            self.config.getpath("media", "library").resolve(),  # type: ignore
+            "Should match option from tv section of config.",
+        )
+        self.assertEqual(
+            self.no_path.library,
+            pathlib.Path("fixtures/media/").resolve(),
+            "Should match known type-specific value.",
+        )
+
+    def test_set_library(self):
+        """Set the library property."""
+
+        temp_str: str = "/tmp/nielsen/media/"
+        temp_path: pathlib.Path = pathlib.Path(temp_str)
+
+        for value in [temp_str, temp_path]:
+            with self.subTest(
+                value=value,
+                msg="Assigning a string or Path should result in the same Path",
+            ):
+                self.no_path.library = value
+                self.assertEqual(self.no_path.library, temp_path)
+
+        with self.assertRaises(
+            TypeError, msg="Cannot set library to non-Path-like object."
+        ):
+            self.no_path.library = None  # type: ignore
+
+    def test_organize_invalid_path(self):
+        """Media with no path or a non-file path cannot be organized."""
+
+        for media in [self.no_path, self.non_file_path]:
+            with self.subTest(media=media), self.assertRaises(TypeError):
+                media.organize()
+
+    def test_organize_library_permission_error(self):
+        """Library directory does not exist and cannot be created."""
+
+        with self.assertRaises(
+            PermissionError, msg="Cannot create directory for library"
+        ), mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
+            "pathlib.Path.is_dir"
+        ) as mock_is_dir, mock.patch(
+            "pathlib.Path.mkdir"
+        ) as mock_mkdir:
+            mock_is_file.return_value = True
+            mock_is_dir.return_value = False
+            mock_mkdir.side_effect = PermissionError()
+            self.good_path.organize()
+
+    def test_organize_library_not_a_directory_error(self):
+        """Library path does not point to a directory."""
+
+        with self.assertRaises(
+            NotADirectoryError, msg="Library is not a directory"
+        ), mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
+            "pathlib.Path.is_dir"
+        ) as mock_is_dir, mock.patch(
+            "pathlib.Path.mkdir"
+        ) as mock_mkdir:
+            mock_is_file.return_value = True
+            mock_is_dir.return_value = False
+            mock_mkdir.side_effect = NotADirectoryError()
+            self.good_path.organize()
+
+    def test_organize_happy_path(self):
+        """Organize file, set and return new path."""
+
+        with mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
+            "pathlib.Path.rename"
+        ) as mock_rename:
+            # Mock the existence of the file on disk to avoid creating and removing
+            # files on every test.
+            mock_is_file.return_value = True
+            # Path.rename moves a file and returns the destination path passed as an
+            # argument. Mock it by just returning the input argument.
+            mock_rename.side_effect = lambda x: x
+
+            library: pathlib.Path = pathlib.Path("fixtures/media/")
+            self.good_path.library = library
+            self.assertIsInstance(self.good_path.path, pathlib.Path)
+            self.assertEqual(
+                self.good_path.organize(),
+                (library / self.good_path.path.name).resolve(),  # type: ignore
+            )
+
+
 class TestTV(unittest.TestCase):
     """Test the TV class."""
 
     def setUp(self):
-        """Prepare references objects for tests."""
+        """Prepare reference objects for tests."""
+
+        self.config: ConfigParser = nielsen.config.config
+        nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
 
         self.wot_good_filename: nielsen.media.Media = nielsen.media.TV(
-            "The Wheel of Time -01.08- The Eye of the World.mkv"
+            pathlib.Path("The Wheel of Time -01.08- The Eye of the World.mkv")
         )
         self.wot_good_metadata: nielsen.media.Media = nielsen.media.TV(
-            "wot.mkv",
+            pathlib.Path("wot.mkv"),
             series="The Wheel of Time",
             season=1,
             episode=8,
             title="The Eye of the World",
         )
         self.wot_all_data: nielsen.media.Media = nielsen.media.TV(
-            "The Wheel of Time -01.08- The Eye of the World.mkv",
+            pathlib.Path("The Wheel of Time -01.08- The Eye of the World.mkv"),
             series="The Wheel of Time",
             season=1,
             episode=8,
             title="The Eye of the World",
         )
+
+    def tearDown(self):
+        """Clean up after each test."""
+
+        self.config.clear()
 
     def test_init(self):
         """Type conversion from the base class should happen in the subclass, as well."""
@@ -149,39 +334,27 @@ class TestTV(unittest.TestCase):
     def test_ordering(self):
         """Items should be sorted by season, then episode number."""
 
-        self.assertGreater(
-            nielsen.media.TV(None, season=1, episode=2),
+        self.assertLess(
             nielsen.media.TV(None, season=1, episode=1),
+            nielsen.media.TV(None, season=1, episode=2),
             "Same season, different episode numbers",
         )
 
-        self.assertGreater(
-            nielsen.media.TV("Show -02.01- Title.mkv", season=2, episode=1),
-            nielsen.media.TV("Show -01.01- Title.mkv", season=1, episode=1),
+        self.assertLess(
+            nielsen.media.TV(None, season=1, episode=1),
+            nielsen.media.TV(None, season=2, episode=1),
             "Different seasons, same episode number",
         )
 
-        self.assertGreater(
-            nielsen.media.TV(None, season=2, episode=2),
+        self.assertLess(
             nielsen.media.TV(None, season=1, episode=10),
+            nielsen.media.TV(None, season=2, episode=2),
             "Different seasons and episode numbers",
         )
 
-        self.assertLessEqual(
-            nielsen.media.TV(None, season=3, episode=4),
-            nielsen.media.TV(None, season=3, episode=4),
-            "Same season and episode number",
-        )
-
-        self.assertGreaterEqual(
-            nielsen.media.TV(None, season=4, episode=5),
-            nielsen.media.TV(None, season=4, episode=5),
-            "Same season and episode number",
-        )
-
         self.assertEqual(
-            nielsen.media.TV(None, season=4, episode=5),
-            nielsen.media.TV(None, season=4, episode=5),
+            nielsen.media.TV(None, season=1, episode=2),
+            nielsen.media.TV(None, season=1, episode=2),
             "Same season and episode number",
         )
 
@@ -199,6 +372,13 @@ class TestTV(unittest.TestCase):
             "TV object with all metadata",
         )
 
+    def test_get_section(self):
+        """The section property should return a value based on the type."""
+
+        self.assertEqual(
+            self.wot_all_data.section, "tv", "The section should match the type name"
+        )
+
     def test_infer(self):
         """A descriptive filename should populate the metadata."""
 
@@ -212,14 +392,6 @@ class TestTV(unittest.TestCase):
             self.wot_good_filename,
             self.wot_all_data,
             "Objects should be identical after infer is called",
-        )
-
-    def test_organize(self):
-        """Organizing an object should return its new path."""
-
-        self.assertEqual(
-            pathlib.Path(f"/tmp/organized/{self.wot_all_data}"),
-            self.wot_all_data.organize(),
         )
 
 
