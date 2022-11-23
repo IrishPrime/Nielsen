@@ -119,16 +119,13 @@ class TV(Media):
     title: str = ""
 
     def infer(self):
-        self.series = "The Wheel of Time"
-        self.season = 1
-        self.episode = 8
-        self.title = "The Eye of the World"
+        """Infer information about the object's metadata based on its filename."""
 
     def __str__(self) -> str:
         """Return a friendly, human-readable version of the file metadata, fit for
         renaming or display purposes."""
 
-        return f"{self.series} -{self.season:02d}.{self.episode:02d}- {self.title}"
+        return f"{self.series or 'Unknown'} -{self.season:02d}.{self.episode:02d}- {self.title or 'Unknown'}"
 
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab
