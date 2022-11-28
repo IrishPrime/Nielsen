@@ -121,6 +121,12 @@ class TV(Media):
     def infer(self):
         """Infer information about the object's metadata based on its filename."""
 
+    def get_patterns(self) -> list[str]:
+        """Return a list of strings representing the filename patterns that should be
+        matched against when attempting to infer metadata information."""
+
+        pass
+
     def __str__(self) -> str:
         """Return a friendly, human-readable version of the file metadata, fit for
         renaming or display purposes."""
