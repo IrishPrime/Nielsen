@@ -15,8 +15,8 @@ config["DEFAULT"] = {
     "dryrun": "False",
     # Fetch - Whether to query remote sources for information
     "fetch": "True",
-    # Filter - Whether to refer to the <type>/filter section when organizing Media
-    "filter": "True",
+    # Transform - Whether to refer to the <type>/<field>/transform section when organizing Media
+    "transform": "True",
     # Interactive - Whether to prompt the user to make decisions while processing
     "interactive": "True",
     # Library - The directory under which Media should be organized

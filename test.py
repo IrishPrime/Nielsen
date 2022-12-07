@@ -3,11 +3,12 @@
 
 import logging
 import pathlib
+import re
 import unittest
 import unittest.util
 from configparser import ConfigParser
 from unittest import mock
-from typing import Any
+from typing import Any, Pattern
 
 import nielsen.config
 import nielsen.media
@@ -52,7 +53,7 @@ class TestConfig(unittest.TestCase):
         defaults: dict[str, str] = {
             "dryrun": "False",
             "fetch": "True",
-            "filter": "True",
+            "transform": "True",
             "interactive": "True",
             "library": str(pathlib.Path.home()),
             "logfile": "~/.local/log/nielsen/nielsen.log",
@@ -123,12 +124,17 @@ class TestMedia(unittest.TestCase):
         nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
 
         self.no_path: nielsen.media.Media = nielsen.media.Media()
-        self.non_file_path: nielsen.media.Media = nielsen.media.TV(
+        self.non_file_path: nielsen.media.Media = nielsen.media.Media(
             pathlib.Path("/dev/null")
         )
         self.good_path: nielsen.media.Media = nielsen.media.Media(
             pathlib.Path("fixtures/media.file")
         )
+        self.medias: list[nielsen.media.Media] = [
+            self.no_path,
+            self.non_file_path,
+            self.good_path,
+        ]
 
     def tearDown(self):
         """Clean up after each test."""
@@ -151,22 +157,62 @@ class TestMedia(unittest.TestCase):
             self.no_path.library.is_absolute(), "Library should be an absolute path."
         )
 
-    def test_infer(self):
-        """Cannot use infer on the base Media class."""
+    def test_infer_no_path(self):
+        """Cannot infer information about an object with no filename."""
+
+        with self.assertLogs("nielsen.media", logging.ERROR) as cm:
+            self.no_path.infer()
+            self.assertTrue(
+                cm.records[0].msg.startswith("NO_PATH"),
+                "Log an error when inferring without a path",
+            )
+
+    def test_infer_no_patterns(self):
+        """Cannot infer information about an object with no patterns to match."""
+
+        with self.assertLogs("nielsen.media", logging.ERROR) as cm:
+            self.good_path.infer()
+            self.assertTrue(
+                cm.records[0].msg.startswith("NO_PATTERNS"),
+                "Log an error when inferring without patterns",
+            )
+
+    def test__match_no_match(self):
+        """Return an empty metadata dictionary and log a NO_MATCH message."""
+
+        # Add a pattern just to ensure that the match reaches it and fails to match.
+        self.good_path.patterns = [re.compile("USELESS_PATTERN")]
+
+        with self.assertLogs("nielsen.media", logging.INFO) as cm:
+            self.assertDictEqual(
+                {}, self.good_path._match(), "Retuen an empty dictionary."
+            )
+            self.assertTrue(
+                cm.records[0].msg.startswith("NO_MATCH"), "Log a NO_MATCH message"
+            )
+
+    def test_set_metadata(self):
+        """Method not implemented for base Media class."""
 
         with self.assertRaises(NotImplementedError):
-            self.good_path.infer()
+            self.good_path.set_metadata({})
 
     def test_get_section(self):
         """The section property should return a value based on the type."""
 
         self.assertEqual(
-            self.no_path.section, "media", "The section should match the type name"
+            self.no_path.section,
+            "media",
+            "The section should match the type name, but lowercase",
         )
 
     def test_set_section(self):
         """Set the section property."""
 
+        self.assertEqual(
+            self.no_path.section, "media", "The section should match the type"
+        )
+        # Set a new section so the change can be verified
         existing_section: str = "unit tests"
         self.no_path.section = existing_section
         self.assertEqual(
@@ -176,6 +222,9 @@ class TestMedia(unittest.TestCase):
         )
 
         new_section: str = "new section"
+        self.assertFalse(
+            self.config.has_section(new_section), "New section should not yet exist"
+        )
         self.no_path.section = new_section
         self.assertEqual(
             self.no_path.section,
@@ -211,22 +260,32 @@ class TestMedia(unittest.TestCase):
 
         for value in [temp_str, temp_path]:
             with self.subTest(
-                value=value,
-                msg="Assigning a string or Path should result in the same Path",
+                "Assigning a string or Path should result in the same Path",
+                item=value,
             ):
                 self.no_path.library = value
                 self.assertEqual(self.no_path.library, temp_path)
+                self.assertIsInstance(self.no_path.library, pathlib.Path)
 
         with self.assertRaises(
             TypeError, msg="Cannot set library to non-Path-like object."
         ):
             self.no_path.library = None  # type: ignore
 
+    def test_get_patterns(self):
+        """Media base objects have no patterns."""
+
+        for media in self.medias:
+            with self.subTest(
+                "List of patterns must be empty for Media type", item=media
+            ):
+                self.assertListEqual([], media.patterns)
+
     def test_organize_invalid_path(self):
         """Media with no path or a non-file path cannot be organized."""
 
         for media in [self.no_path, self.non_file_path]:
-            with self.subTest(media=media), self.assertRaises(TypeError):
+            with self.subTest(item=media), self.assertRaises(TypeError):
                 media.organize()
 
     def test_organize_library_permission_error(self):
@@ -259,7 +318,7 @@ class TestMedia(unittest.TestCase):
             mock_mkdir.side_effect = NotADirectoryError()
             self.good_path.organize()
 
-    def test_organize_happy_path(self):
+    def test_organize_success(self):
         """Organize file, set and return new path."""
 
         with mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
@@ -272,12 +331,10 @@ class TestMedia(unittest.TestCase):
             # argument. Mock it by just returning the input argument.
             mock_rename.side_effect = lambda x: x
 
-            library: pathlib.Path = pathlib.Path("fixtures/media/")
-            self.good_path.library = library
             self.assertIsInstance(self.good_path.path, pathlib.Path)
             self.assertEqual(
                 self.good_path.organize(),
-                (library / self.good_path.path.name).resolve(),  # type: ignore
+                (self.good_path.library / self.good_path.path.name).resolve(),  # type: ignore
             )
 
 
@@ -290,23 +347,29 @@ class TestTV(unittest.TestCase):
         self.config: ConfigParser = nielsen.config.config
         nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
 
-        self.wot_good_filename: nielsen.media.Media = nielsen.media.TV(
-            pathlib.Path("The Wheel of Time -01.08- The Eye of the World.mkv")
+        self.tv_good_filename: nielsen.media.Media = nielsen.media.TV(
+            pathlib.Path("Ted Lasso -01.03- Trent Crimm: The Independent.mkv")
         )
-        self.wot_good_metadata: nielsen.media.Media = nielsen.media.TV(
-            pathlib.Path("wot.mkv"),
-            series="The Wheel of Time",
+        self.tv_good_metadata: nielsen.media.Media = nielsen.media.TV(
+            pathlib.Path("tv.mkv"),
+            series="Ted Lasso",
             season=1,
-            episode=8,
-            title="The Eye of the World",
+            episode=3,
+            title="Trent Crimm: The Independent",
         )
-        self.wot_all_data: nielsen.media.Media = nielsen.media.TV(
-            pathlib.Path("The Wheel of Time -01.08- The Eye of the World.mkv"),
-            series="The Wheel of Time",
+        self.tv_all_data: nielsen.media.Media = nielsen.media.TV(
+            pathlib.Path("Ted Lasso -01.03- Trent Crimm: The Independent.mkv"),
+            series="Ted Lasso",
             season=1,
-            episode=8,
-            title="The Eye of the World",
+            episode=3,
+            title="Trent Crimm: The Independent",
         )
+
+        self.tvs: list[nielsen.media.Media] = [
+            self.tv_good_filename,
+            self.tv_good_metadata,
+            self.tv_all_data,
+        ]
 
     def tearDown(self):
         """Clean up after each test."""
@@ -323,13 +386,23 @@ class TestTV(unittest.TestCase):
                 self.assertIsNone(tv_none_path.path)
 
         valid_paths: list[nielsen.media.Media] = [
-            self.wot_good_filename,
-            self.wot_good_metadata,
-            self.wot_all_data,
+            self.tv_good_filename,
+            self.tv_good_metadata,
+            self.tv_all_data,
         ]
         for item in valid_paths:
             with self.subTest("Paths and strings should become paths", item=item):
                 self.assertIsInstance(item.path, pathlib.Path)
+
+    def test_get_patterns(self):
+        """TV objects should have a list of patterns."""
+
+        for tv in self.tvs:
+            with self.subTest(tv=tv):
+                self.assertIsInstance(tv.patterns, list)
+                for pattern in tv.patterns:
+                    with self.subTest(pattern=pattern):
+                        self.assertIsInstance(pattern, Pattern)
 
     def test_ordering(self):
         """Items should be sorted by season, then episode number."""
@@ -358,41 +431,51 @@ class TestTV(unittest.TestCase):
             "Same season and episode number",
         )
 
-    def test_str(self):
-        """The string representation should provide a useful display name."""
-
-        self.assertEqual(
-            "The Wheel of Time -01.08- The Eye of the World",
-            str(self.wot_all_data),
-            "TV object with all data",
-        )
-        self.assertEqual(
-            "The Wheel of Time -01.08- The Eye of the World",
-            str(self.wot_good_metadata),
-            "TV object with all metadata",
-        )
-
     def test_get_section(self):
         """The section property should return a value based on the type."""
 
         self.assertEqual(
-            self.wot_all_data.section, "tv", "The section should match the type name"
+            self.tv_all_data.section,
+            "tv",
+            "The section should match the type name, but lowercase",
         )
 
-    def test_infer(self):
+    def test_str(self):
+        """The string representation should provide a useful display name."""
+
+        self.assertEqual(
+            "Ted Lasso -01.03- Trent Crimm: The Independent",
+            str(self.tv_all_data),
+            "TV object with all data",
+        )
+        self.assertEqual(
+            "Ted Lasso -01.03- Trent Crimm: The Independent",
+            str(self.tv_good_metadata),
+            "TV object with all metadata",
+        )
+        self.assertEqual(
+            "Unknown -00.00- Unknown",
+            str(self.tv_good_filename),
+            "TV object with no metadata, but good filename",
+        )
+
+    def test_infer_basic(self):
         """A descriptive filename should populate the metadata."""
 
         self.assertNotEqual(
-            self.wot_good_filename,
-            self.wot_all_data,
+            self.tv_good_filename,
+            self.tv_all_data,
             "Objects should differ before infer is called",
         )
-        self.wot_good_filename.infer()
+        self.tv_good_filename.infer()
         self.assertEqual(
-            self.wot_good_filename,
-            self.wot_all_data,
+            self.tv_good_filename,
+            self.tv_all_data,
             "Objects should be identical after infer is called",
         )
+
+    def test_infer_all_patterns(self):
+        """Test every pattern and difficult edge cases."""
 
 
 if __name__ == "__main__":
