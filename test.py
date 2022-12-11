@@ -3,14 +3,20 @@
 
 import logging
 import pathlib
+import re
 import unittest
+import unittest.util
 from configparser import ConfigParser
 from unittest import mock
+from typing import Any, Pattern
 
 import nielsen.config
+import nielsen.media
+
+unittest.util._MAX_LENGTH = 2000
 
 logger: logging.Logger = logging.getLogger("nielsen")
-logger.addHandler(logging.NullHandler())
+# logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.DEBUG)
 
 
@@ -18,9 +24,14 @@ class TestConfig(unittest.TestCase):
     """Test the nielsen.config module."""
 
     def setUp(self):
-        """Empty the config before each test."""
+        """Clear the config to avoid execution order complications."""
 
         self.config: ConfigParser = nielsen.config.config
+        self.config.clear()
+
+    def tearDown(self):
+        """Clear the config to avoid execution order complications."""
+
         self.config.clear()
 
     @mock.patch("nielsen.config.config.read")
@@ -42,13 +53,14 @@ class TestConfig(unittest.TestCase):
         defaults: dict[str, str] = {
             "dryrun": "False",
             "fetch": "True",
-            "filter": "True",
+            "transform": "True",
             "interactive": "True",
+            "library": str(pathlib.Path.home()),
             "logfile": "~/.local/log/nielsen/nielsen.log",
             "loglevel": "WARNING",
-            "mediapath": str(pathlib.Path.home()),
             "mode": "664",
             "organize": "True",
+            "rename": "True",
         }
 
         self.config.add_section("test section")
@@ -100,6 +112,370 @@ class TestConfig(unittest.TestCase):
         self.assertGreater(
             file.stat().st_size, 100, f"{file} must have some data in it."
         )
+
+
+class TestMedia(unittest.TestCase):
+    """Test the nielsen.media.Media base class."""
+
+    def setUp(self):
+        """Prepare reference objects for tests."""
+
+        self.config: ConfigParser = nielsen.config.config
+        nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
+
+        self.no_path: nielsen.media.Media = nielsen.media.Media()
+        self.non_file_path: nielsen.media.Media = nielsen.media.Media(
+            pathlib.Path("/dev/null")
+        )
+        self.good_path: nielsen.media.Media = nielsen.media.Media(
+            pathlib.Path("fixtures/media.file")
+        )
+        self.medias: list[nielsen.media.Media] = [
+            self.no_path,
+            self.non_file_path,
+            self.good_path,
+        ]
+
+    def tearDown(self):
+        """Clean up after each test."""
+
+        self.config.clear()
+
+    def test_init(self):
+        """Test construction of new Media objects."""
+
+        self.assertIsNone(self.no_path.path, "No path attribute set by default.")
+        self.assertEqual(
+            self.no_path.section, "media", "Section attribute based on type."
+        )
+        # The library attribute must be a path, but the default value isn't especially
+        # important for generic Media objects.
+        self.assertIsInstance(
+            self.no_path.library, pathlib.Path, "Library attribute must be a Path."
+        )
+        self.assertTrue(
+            self.no_path.library.is_absolute(), "Library should be an absolute path."
+        )
+
+    def test_infer_no_path(self):
+        """Cannot infer information about an object with no filename."""
+
+        with self.assertLogs("nielsen.media", logging.ERROR) as cm:
+            self.no_path.infer()
+            self.assertTrue(
+                cm.records[0].msg.startswith("NO_PATH"),
+                "Log an error when inferring without a path",
+            )
+
+    def test_infer_no_patterns(self):
+        """Cannot infer information about an object with no patterns to match."""
+
+        with self.assertLogs("nielsen.media", logging.ERROR) as cm:
+            self.good_path.infer()
+            self.assertTrue(
+                cm.records[0].msg.startswith("NO_PATTERNS"),
+                "Log an error when inferring without patterns",
+            )
+
+    def test__match_no_match(self):
+        """Return an empty metadata dictionary and log a NO_MATCH message."""
+
+        # Add a pattern just to ensure that the match reaches it and fails to match.
+        self.good_path.patterns = [re.compile("USELESS_PATTERN")]
+
+        with self.assertLogs("nielsen.media", logging.INFO) as cm:
+            self.assertDictEqual(
+                {}, self.good_path._match(), "Retuen an empty dictionary."
+            )
+            self.assertTrue(
+                cm.records[0].msg.startswith("NO_MATCH"), "Log a NO_MATCH message"
+            )
+
+    def test_set_metadata(self):
+        """Method not implemented for base Media class."""
+
+        with self.assertRaises(NotImplementedError):
+            self.good_path.set_metadata({})
+
+    def test_get_section(self):
+        """The section property should return a value based on the type."""
+
+        self.assertEqual(
+            self.no_path.section,
+            "media",
+            "The section should match the type name, but lowercase",
+        )
+
+    def test_set_section(self):
+        """Set the section property."""
+
+        self.assertEqual(
+            self.no_path.section, "media", "The section should match the type"
+        )
+        # Set a new section so the change can be verified
+        existing_section: str = "unit tests"
+        self.no_path.section = existing_section
+        self.assertEqual(
+            self.no_path.section,
+            existing_section,
+            "The section should match the existing section assigned to it",
+        )
+
+        new_section: str = "new section"
+        self.assertFalse(
+            self.config.has_section(new_section), "New section should not yet exist"
+        )
+        self.no_path.section = new_section
+        self.assertEqual(
+            self.no_path.section,
+            new_section,
+            "The section should match the newly created section assigned to it",
+        )
+        self.assertTrue(
+            self.config.has_section(new_section),
+            "The new section should be added to the config",
+        )
+
+    def test_get_library(self):
+        """Get the library property from the appropriate config section."""
+
+        # Calling resolve on the Path we compare to also ensures the library property is
+        # always an absolute path.
+        self.assertEqual(
+            self.no_path.library,
+            self.config.getpath("media", "library").resolve(),  # type: ignore
+            "Should match option from tv section of config.",
+        )
+        self.assertEqual(
+            self.no_path.library,
+            pathlib.Path("fixtures/media/").resolve(),
+            "Should match known type-specific value.",
+        )
+
+    def test_set_library(self):
+        """Set the library property."""
+
+        temp_str: str = "/tmp/nielsen/media/"
+        temp_path: pathlib.Path = pathlib.Path(temp_str)
+
+        for value in [temp_str, temp_path]:
+            with self.subTest(
+                "Assigning a string or Path should result in the same Path",
+                item=value,
+            ):
+                self.no_path.library = value
+                self.assertEqual(self.no_path.library, temp_path)
+                self.assertIsInstance(self.no_path.library, pathlib.Path)
+
+        with self.assertRaises(
+            TypeError, msg="Cannot set library to non-Path-like object."
+        ):
+            self.no_path.library = None  # type: ignore
+
+    def test_get_patterns(self):
+        """Media base objects have no patterns."""
+
+        for media in self.medias:
+            with self.subTest(
+                "List of patterns must be empty for Media type", item=media
+            ):
+                self.assertListEqual([], media.patterns)
+
+    def test_organize_invalid_path(self):
+        """Media with no path or a non-file path cannot be organized."""
+
+        for media in [self.no_path, self.non_file_path]:
+            with self.subTest(item=media), self.assertRaises(TypeError):
+                media.organize()
+
+    def test_organize_library_permission_error(self):
+        """Library directory does not exist and cannot be created."""
+
+        with self.assertRaises(
+            PermissionError, msg="Cannot create directory for library"
+        ), mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
+            "pathlib.Path.is_dir"
+        ) as mock_is_dir, mock.patch(
+            "pathlib.Path.mkdir"
+        ) as mock_mkdir:
+            mock_is_file.return_value = True
+            mock_is_dir.return_value = False
+            mock_mkdir.side_effect = PermissionError()
+            self.good_path.organize()
+
+    def test_organize_library_not_a_directory_error(self):
+        """Library path does not point to a directory."""
+
+        with self.assertRaises(
+            NotADirectoryError, msg="Library is not a directory"
+        ), mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
+            "pathlib.Path.is_dir"
+        ) as mock_is_dir, mock.patch(
+            "pathlib.Path.mkdir"
+        ) as mock_mkdir:
+            mock_is_file.return_value = True
+            mock_is_dir.return_value = False
+            mock_mkdir.side_effect = NotADirectoryError()
+            self.good_path.organize()
+
+    def test_organize_success(self):
+        """Organize file, set and return new path."""
+
+        with mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
+            "pathlib.Path.rename"
+        ) as mock_rename:
+            # Mock the existence of the file on disk to avoid creating and removing
+            # files on every test.
+            mock_is_file.return_value = True
+            # Path.rename moves a file and returns the destination path passed as an
+            # argument. Mock it by just returning the input argument.
+            mock_rename.side_effect = lambda x: x
+
+            self.assertIsInstance(self.good_path.path, pathlib.Path)
+            self.assertEqual(
+                self.good_path.organize(),
+                (self.good_path.library / self.good_path.path.name).resolve(),  # type: ignore
+            )
+
+
+class TestTV(unittest.TestCase):
+    """Test the TV class."""
+
+    def setUp(self):
+        """Prepare reference objects for tests."""
+
+        self.config: ConfigParser = nielsen.config.config
+        nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
+
+        self.tv_good_filename: nielsen.media.Media = nielsen.media.TV(
+            pathlib.Path("Ted Lasso -01.03- Trent Crimm: The Independent.mkv")
+        )
+        self.tv_good_metadata: nielsen.media.Media = nielsen.media.TV(
+            pathlib.Path("tv.mkv"),
+            series="Ted Lasso",
+            season=1,
+            episode=3,
+            title="Trent Crimm: The Independent",
+        )
+        self.tv_all_data: nielsen.media.Media = nielsen.media.TV(
+            pathlib.Path("Ted Lasso -01.03- Trent Crimm: The Independent.mkv"),
+            series="Ted Lasso",
+            season=1,
+            episode=3,
+            title="Trent Crimm: The Independent",
+        )
+
+        self.tvs: list[nielsen.media.Media] = [
+            self.tv_good_filename,
+            self.tv_good_metadata,
+            self.tv_all_data,
+        ]
+
+    def tearDown(self):
+        """Clean up after each test."""
+
+        self.config.clear()
+
+    def test_init(self):
+        """Type conversion from the base class should happen in the subclass, as well."""
+
+        falsey: list[Any] = [None, False, 0, ""]
+        for item in falsey:
+            with self.subTest("Falsey path values should convert to None", item=item):
+                tv_none_path: nielsen.media.TV = nielsen.media.TV(item)
+                self.assertIsNone(tv_none_path.path)
+
+        valid_paths: list[nielsen.media.Media] = [
+            self.tv_good_filename,
+            self.tv_good_metadata,
+            self.tv_all_data,
+        ]
+        for item in valid_paths:
+            with self.subTest("Paths and strings should become paths", item=item):
+                self.assertIsInstance(item.path, pathlib.Path)
+
+    def test_get_patterns(self):
+        """TV objects should have a list of patterns."""
+
+        for tv in self.tvs:
+            with self.subTest(tv=tv):
+                self.assertIsInstance(tv.patterns, list)
+                for pattern in tv.patterns:
+                    with self.subTest(pattern=pattern):
+                        self.assertIsInstance(pattern, Pattern)
+
+    def test_ordering(self):
+        """Items should be sorted by season, then episode number."""
+
+        self.assertLess(
+            nielsen.media.TV(None, season=1, episode=1),
+            nielsen.media.TV(None, season=1, episode=2),
+            "Same season, different episode numbers",
+        )
+
+        self.assertLess(
+            nielsen.media.TV(None, season=1, episode=1),
+            nielsen.media.TV(None, season=2, episode=1),
+            "Different seasons, same episode number",
+        )
+
+        self.assertLess(
+            nielsen.media.TV(None, season=1, episode=10),
+            nielsen.media.TV(None, season=2, episode=2),
+            "Different seasons and episode numbers",
+        )
+
+        self.assertEqual(
+            nielsen.media.TV(None, season=1, episode=2),
+            nielsen.media.TV(None, season=1, episode=2),
+            "Same season and episode number",
+        )
+
+    def test_get_section(self):
+        """The section property should return a value based on the type."""
+
+        self.assertEqual(
+            self.tv_all_data.section,
+            "tv",
+            "The section should match the type name, but lowercase",
+        )
+
+    def test_str(self):
+        """The string representation should provide a useful display name."""
+
+        self.assertEqual(
+            "Ted Lasso -01.03- Trent Crimm: The Independent",
+            str(self.tv_all_data),
+            "TV object with all data",
+        )
+        self.assertEqual(
+            "Ted Lasso -01.03- Trent Crimm: The Independent",
+            str(self.tv_good_metadata),
+            "TV object with all metadata",
+        )
+        self.assertEqual(
+            "Unknown -00.00- Unknown",
+            str(self.tv_good_filename),
+            "TV object with no metadata, but good filename",
+        )
+
+    def test_infer_basic(self):
+        """A descriptive filename should populate the metadata."""
+
+        self.assertNotEqual(
+            self.tv_good_filename,
+            self.tv_all_data,
+            "Objects should differ before infer is called",
+        )
+        self.tv_good_filename.infer()
+        self.assertEqual(
+            self.tv_good_filename,
+            self.tv_all_data,
+            "Objects should be identical after infer is called",
+        )
+
+    def test_infer_all_patterns(self):
+        """Test every pattern and difficult edge cases."""
 
 
 if __name__ == "__main__":
