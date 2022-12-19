@@ -177,7 +177,7 @@ class TestMedia(unittest.TestCase):
                 "Log an error when inferring without patterns",
             )
 
-    def test__match_no_match(self):
+    def test_match_no_match(self):
         """Return an empty metadata dictionary and log a NO_MATCH message."""
 
         # Add a pattern just to ensure that the match reaches it and fails to match.
@@ -185,17 +185,23 @@ class TestMedia(unittest.TestCase):
 
         with self.assertLogs("nielsen.media", logging.INFO) as cm:
             self.assertDictEqual(
-                {}, self.good_path._match(), "Retuen an empty dictionary."
+                {}, self.good_path._match(), "Return an empty dictionary."
             )
             self.assertTrue(
                 cm.records[0].msg.startswith("NO_MATCH"), "Log a NO_MATCH message"
             )
 
+    def test_get_metadata(self):
+        """Method not implemented for base Media class."""
+
+        with self.assertRaises(NotImplementedError):
+            self.good_path.metadata
+
     def test_set_metadata(self):
         """Method not implemented for base Media class."""
 
         with self.assertRaises(NotImplementedError):
-            self.good_path.set_metadata({})
+            self.good_path.metadata = {}
 
     def test_get_section(self):
         """The section property should return a value based on the type."""
@@ -357,6 +363,13 @@ class TestTV(unittest.TestCase):
             episode=3,
             title="Trent Crimm: The Independent",
         )
+        self.tv_good_metadata_no_path: nielsen.media.Media = nielsen.media.TV(
+            None,
+            series="Ted Lasso",
+            season=1,
+            episode=3,
+            title="Trent Crimm: The Independent",
+        )
         self.tv_all_data: nielsen.media.Media = nielsen.media.TV(
             pathlib.Path("Ted Lasso -01.03- Trent Crimm: The Independent.mkv"),
             series="Ted Lasso",
@@ -394,6 +407,32 @@ class TestTV(unittest.TestCase):
             with self.subTest("Paths and strings should become paths", item=item):
                 self.assertIsInstance(item.path, pathlib.Path)
 
+    def test_get_metadata(self):
+        """Return a dictionary with all the relevant fields."""
+
+        self.assertDictEqual(
+            {
+                "series": "Ted Lasso",
+                "season": 1,
+                "episode": 3,
+                "title": "Trent Crimm: The Independent",
+            },
+            self.tv_good_metadata.metadata,
+        )
+
+    def test_set_metadata(self):
+        """Set the metadata dictionary."""
+
+        metadata: dict[str, Any] = {
+            "series": "Ted Lasso",
+            "season": 1,
+            "episode": 3,
+            "title": "Trent Crimm: The Independent",
+        }
+        self.tv_good_filename.metadata = metadata
+
+        self.assertDictEqual(metadata, self.tv_good_filename.metadata)
+
     def test_get_patterns(self):
         """TV objects should have a list of patterns."""
 
@@ -403,6 +442,33 @@ class TestTV(unittest.TestCase):
                 for pattern in tv.patterns:
                     with self.subTest(pattern=pattern):
                         self.assertIsInstance(pattern, Pattern)
+
+    def test_get_section(self):
+        """The section property should return a value based on the type."""
+
+        self.assertEqual(
+            self.tv_all_data.section,
+            "tv",
+            "The section should match the type name, but lowercase",
+        )
+
+    def test_infer_basic(self):
+        """A descriptive filename should populate the metadata."""
+
+        self.assertNotEqual(
+            self.tv_good_filename,
+            self.tv_all_data,
+            "Objects should differ before infer is called",
+        )
+        self.tv_good_filename.infer()
+        self.assertEqual(
+            self.tv_good_filename,
+            self.tv_all_data,
+            "Objects should be identical after infer is called",
+        )
+
+    def test_infer_all_patterns(self):
+        """Test every pattern and difficult edge cases."""
 
     def test_ordering(self):
         """Items should be sorted by season, then episode number."""
@@ -431,14 +497,40 @@ class TestTV(unittest.TestCase):
             "Same season and episode number",
         )
 
-    def test_get_section(self):
-        """The section property should return a value based on the type."""
+    def test_transform(self):
+        """Transform series names based on values from the tv/series/transform config section."""
 
-        self.assertEqual(
-            self.tv_all_data.section,
-            "tv",
-            "The section should match the type name, but lowercase",
-        )
+        # Marvel's Agents of S.H.I.E.L.D. has many variants in the way the series name
+        # might be listed. Which variant you prefer is a matter of personal preference
+        # and can be configured, but once configured they should all resolve to the same
+        # user-preferred variant.
+        variants: list[str] = [
+            "Marvel's Agents of S.H.I.E.L.D.",
+            "Marvel's Agents of S H I E L D ",
+            "Marvel's Agents of SHIELD",
+            "Agents of S.H.I.E.L.D.",
+            "Agents of S H I E L D ",
+            "Agents of SHIELD",
+        ]
+
+        self.config.add_section("tv/series/transform")
+        for variant in variants:
+            with self.subTest(variant=variant):
+                self.config.set("tv/series/transform", variant, "Agents of SHIELD")
+                shield: nielsen.media.Media = nielsen.media.TV(
+                    None, series=variant, season=1, episode=1
+                )
+                self.assertEqual(
+                    "Agents of SHIELD",
+                    shield.transform("series"),
+                    "Series name should be transformed to match",
+                )
+
+    def test_repr(self):
+        """Object representation should contain enough information to recreate an object."""
+
+        expected: str = "<TV(self.path=None, self.series='Ted Lasso', self.season=1, self.episode=3, self.title='Trent Crimm: The Independent')>"
+        self.assertEqual(expected, repr(self.tv_good_metadata_no_path))
 
     def test_str(self):
         """The string representation should provide a useful display name."""
@@ -459,23 +551,12 @@ class TestTV(unittest.TestCase):
             "TV object with no metadata, but good filename",
         )
 
-    def test_infer_basic(self):
-        """A descriptive filename should populate the metadata."""
 
-        self.assertNotEqual(
-            self.tv_good_filename,
-            self.tv_all_data,
-            "Objects should differ before infer is called",
-        )
-        self.tv_good_filename.infer()
-        self.assertEqual(
-            self.tv_good_filename,
-            self.tv_all_data,
-            "Objects should be identical after infer is called",
-        )
+class TestFetcher(unittest.TestCase):
+    """Can you test a Protocol?"""
 
-    def test_infer_all_patterns(self):
-        """Test every pattern and difficult edge cases."""
+    def setUp(self):
+        """Prepare reference objects for tests."""
 
 
 if __name__ == "__main__":
