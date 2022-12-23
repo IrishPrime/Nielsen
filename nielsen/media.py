@@ -154,7 +154,8 @@ class Media:
         self.metadata = metadata
 
     def _match(self) -> dict[str, Any]:
-        """Return the results of `Match.groupdict()` if the filename matched any of the patterns."""
+        """Return the results of `Match.groupdict()` if the filename matched any of the
+        patterns. Should only be called by `infer()`."""
 
         # Assert values here which have already been checked by Media.infer to avoid
         # type errors from the linter.

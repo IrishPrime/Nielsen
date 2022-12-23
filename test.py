@@ -11,6 +11,7 @@ from unittest import mock
 from typing import Any, Pattern
 
 import nielsen.config
+import nielsen.fetcher
 import nielsen.media
 
 unittest.util._MAX_LENGTH = 2000
@@ -526,6 +527,12 @@ class TestTV(unittest.TestCase):
                     "Series name should be transformed to match",
                 )
 
+    def test_transform_no_section(self):
+        """Log a warning and return the input if no config section found."""
+
+    def test_transform_no_option(self):
+        """Log a warning and return the input if no config option found."""
+
     def test_repr(self):
         """Object representation should contain enough information to recreate an object."""
 
@@ -552,11 +559,25 @@ class TestTV(unittest.TestCase):
         )
 
 
-class TestFetcher(unittest.TestCase):
+class TestTVMazeFetcher(unittest.TestCase):
     """Can you test a Protocol?"""
 
     def setUp(self):
         """Prepare reference objects for tests."""
+
+        self.fetcher: nielsen.fetcher.Fetcher = nielsen.fetcher.TVMazeFetcher()
+
+    def tearDown(self):
+        """Clean up after each test."""
+
+    def test_get_series_id_local(self):
+        """Get series ID from local config file."""
+
+    def test_get_series_id_remote(self):
+        """Get series ID from TVMaze API."""
+
+    def test_fetch(self):
+        """Method not implemented for base Fetcher Protocol."""
 
 
 if __name__ == "__main__":
