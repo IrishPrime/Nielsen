@@ -3,12 +3,15 @@
 
 import logging
 import pathlib
+import pickle
 import re
 import unittest
 import unittest.util
 from configparser import ConfigParser
 from unittest import mock
 from typing import Any, Pattern
+
+import requests
 
 import nielsen.config
 import nielsen.fetcher
@@ -18,7 +21,7 @@ unittest.util._MAX_LENGTH = 2000
 
 logger: logging.Logger = logging.getLogger("nielsen")
 # logger.addHandler(logging.StreamHandler())
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 
 class TestConfig(unittest.TestCase):
@@ -530,8 +533,17 @@ class TestTV(unittest.TestCase):
     def test_transform_no_section(self):
         """Log a warning and return the input if no config section found."""
 
+        with self.assertLogs("nielsen", logging.WARNING) as cm:
+            self.tv_all_data.transform("series")
+            self.assertIn("NO_TRANSFORM_SECTION", cm.records[0].getMessage())
+
     def test_transform_no_option(self):
         """Log a warning and return the input if no config option found."""
+
+        self.config.add_section("tv/series/transform")
+        with self.assertLogs("nielsen", logging.WARNING) as cm:
+            self.tv_all_data.transform("series")
+            self.assertIn("NO_TRANSFORM_OPTION", cm.records[0].getMessage())
 
     def test_repr(self):
         """Object representation should contain enough information to recreate an object."""
@@ -559,22 +571,96 @@ class TestTV(unittest.TestCase):
         )
 
 
-class TestTVMazeFetcher(unittest.TestCase):
-    """Can you test a Protocol?"""
+class TestTVMaze(unittest.TestCase):
+    """Tests for the TVMaze."""
 
     def setUp(self):
         """Prepare reference objects for tests."""
 
-        self.fetcher: nielsen.fetcher.Fetcher = nielsen.fetcher.TVMazeFetcher()
+        self.config: ConfigParser = nielsen.config.config
+        nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
+
+        self.fetcher: nielsen.fetcher.TVMaze = nielsen.fetcher.TVMaze()
+        self.ted_lasso: nielsen.media.TV = nielsen.media.TV(series="Ted Lasso")
+        self.ted_lasso_id: int = 44458
+        self.agents_of_shield: nielsen.media.TV = nielsen.media.TV(
+            series="Agents of SHIELD"
+        )
+        self.agents_of_shield_id: int = 31
 
     def tearDown(self):
         """Clean up after each test."""
 
+        self.config.clear()
+
     def test_get_series_id_local(self):
         """Get series ID from local config file."""
 
-    def test_get_series_id_remote(self):
+        # Use a Mock to assert the right function was called.
+        self.fetcher.get_series_id_local = mock.MagicMock(
+            side_effect=self.fetcher.get_series_id_local
+        )
+
+        self.assertEqual(
+            self.fetcher.get_series_id(self.ted_lasso),
+            self.ted_lasso_id,
+            "Should get ID from config file",
+        )
+        self.fetcher.get_series_id_local.assert_called()
+
+    @mock.patch("nielsen.fetcher.requests.get")
+    def test_get_series_id_remote_single(self, mock_get: mock.Mock):
         """Get series ID from TVMaze API."""
+
+        # Clear the config to ensure the series isn't found locally
+        self.config.clear()
+
+        # Load test fixture with actual API results
+        resp: requests.models.Response = pickle.loads(
+            pathlib.Path("fixtures/tv/singlesearch-ted-lasso.pickle").read_bytes()
+        )
+
+        # Use a Mock to assert the right function was called.
+        self.fetcher.get_series_id_singlesearch = mock.MagicMock(
+            side_effect=self.fetcher.get_series_id_singlesearch
+        )
+
+        mock_get.return_value = resp
+        self.assertEqual(
+            self.fetcher.get_series_id(self.ted_lasso),
+            self.ted_lasso_id,
+            "Should get ID from TVMaze response",
+        )
+        self.fetcher.get_series_id_singlesearch.assert_called()
+
+    @mock.patch("builtins.input", side_effect="0")
+    @mock.patch("nielsen.fetcher.requests.get")
+    def test_get_series_id_remote_multiple(
+        self, mock_get: mock.Mock, mock_input: mock.Mock
+    ):
+        """Get series ID from TVMaze API."""
+
+        # Clear the config to ensure the series isn't found locally
+        self.config.clear()
+
+        # Load test fixture with actual API results
+        resp: requests.models.Response = pickle.loads(
+            pathlib.Path("fixtures/tv/search-agents-of-shield.pickle").read_bytes()
+        )
+
+        # Use a Mock to assert the right function was called.
+        self.fetcher.get_series_id_search = mock.MagicMock(
+            side_effect=self.fetcher.get_series_id_search
+        )
+
+        mock_get.return_value = resp
+        self.assertEqual(
+            self.fetcher.get_series_id(media=self.agents_of_shield, interactive=True),
+            self.agents_of_shield_id,
+            "Should get ID from TVMaze response",
+        )
+
+        self.fetcher.get_series_id_search.assert_called()
 
     def test_fetch(self):
         """Method not implemented for base Fetcher Protocol."""
