@@ -3,6 +3,7 @@
 
 import logging
 import pathlib
+import pickle
 import re
 import unittest
 import unittest.util
@@ -10,14 +11,16 @@ from configparser import ConfigParser
 from unittest import mock
 from typing import Any, Pattern
 
+import requests
+
 import nielsen.config
+import nielsen.fetcher
 import nielsen.media
 
-unittest.util._MAX_LENGTH = 2000
+unittest.util._MAX_LENGTH = 2048
 
 logger: logging.Logger = logging.getLogger("nielsen")
-# logger.addHandler(logging.StreamHandler())
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.NOTSET)
 
 
 class TestConfig(unittest.TestCase):
@@ -177,7 +180,7 @@ class TestMedia(unittest.TestCase):
                 "Log an error when inferring without patterns",
             )
 
-    def test__match_no_match(self):
+    def test_match_no_match(self):
         """Return an empty metadata dictionary and log a NO_MATCH message."""
 
         # Add a pattern just to ensure that the match reaches it and fails to match.
@@ -185,17 +188,23 @@ class TestMedia(unittest.TestCase):
 
         with self.assertLogs("nielsen.media", logging.INFO) as cm:
             self.assertDictEqual(
-                {}, self.good_path._match(), "Retuen an empty dictionary."
+                {}, self.good_path._match(), "Return an empty dictionary."
             )
             self.assertTrue(
                 cm.records[0].msg.startswith("NO_MATCH"), "Log a NO_MATCH message"
             )
 
+    def test_get_metadata(self):
+        """Method not implemented for base Media class."""
+
+        with self.assertRaises(NotImplementedError):
+            self.good_path.metadata
+
     def test_set_metadata(self):
         """Method not implemented for base Media class."""
 
         with self.assertRaises(NotImplementedError):
-            self.good_path.set_metadata({})
+            self.good_path.metadata = {}
 
     def test_get_section(self):
         """The section property should return a value based on the type."""
@@ -357,6 +366,13 @@ class TestTV(unittest.TestCase):
             episode=3,
             title="Trent Crimm: The Independent",
         )
+        self.tv_good_metadata_no_path: nielsen.media.Media = nielsen.media.TV(
+            None,
+            series="Ted Lasso",
+            season=1,
+            episode=3,
+            title="Trent Crimm: The Independent",
+        )
         self.tv_all_data: nielsen.media.Media = nielsen.media.TV(
             pathlib.Path("Ted Lasso -01.03- Trent Crimm: The Independent.mkv"),
             series="Ted Lasso",
@@ -394,6 +410,32 @@ class TestTV(unittest.TestCase):
             with self.subTest("Paths and strings should become paths", item=item):
                 self.assertIsInstance(item.path, pathlib.Path)
 
+    def test_get_metadata(self):
+        """Return a dictionary with all the relevant fields."""
+
+        self.assertDictEqual(
+            {
+                "series": "Ted Lasso",
+                "season": 1,
+                "episode": 3,
+                "title": "Trent Crimm: The Independent",
+            },
+            self.tv_good_metadata.metadata,
+        )
+
+    def test_set_metadata(self):
+        """Set the metadata dictionary."""
+
+        metadata: dict[str, Any] = {
+            "series": "Ted Lasso",
+            "season": 1,
+            "episode": 3,
+            "title": "Trent Crimm: The Independent",
+        }
+        self.tv_good_filename.metadata = metadata
+
+        self.assertDictEqual(metadata, self.tv_good_filename.metadata)
+
     def test_get_patterns(self):
         """TV objects should have a list of patterns."""
 
@@ -403,6 +445,33 @@ class TestTV(unittest.TestCase):
                 for pattern in tv.patterns:
                     with self.subTest(pattern=pattern):
                         self.assertIsInstance(pattern, Pattern)
+
+    def test_get_section(self):
+        """The section property should return a value based on the type."""
+
+        self.assertEqual(
+            self.tv_all_data.section,
+            "tv",
+            "The section should match the type name, but lowercase",
+        )
+
+    def test_infer_basic(self):
+        """A descriptive filename should populate the metadata."""
+
+        self.assertNotEqual(
+            self.tv_good_filename,
+            self.tv_all_data,
+            "Objects should differ before infer is called",
+        )
+        self.tv_good_filename.infer()
+        self.assertEqual(
+            self.tv_good_filename,
+            self.tv_all_data,
+            "Objects should be identical after infer is called",
+        )
+
+    def test_infer_all_patterns(self):
+        """Test every pattern and difficult edge cases."""
 
     def test_ordering(self):
         """Items should be sorted by season, then episode number."""
@@ -431,14 +500,55 @@ class TestTV(unittest.TestCase):
             "Same season and episode number",
         )
 
-    def test_get_section(self):
-        """The section property should return a value based on the type."""
+    def test_transform(self):
+        """Transform series names based on values from the tv/series/transform config section."""
 
-        self.assertEqual(
-            self.tv_all_data.section,
-            "tv",
-            "The section should match the type name, but lowercase",
-        )
+        # Marvel's Agents of S.H.I.E.L.D. has many variants in the way the series name
+        # might be listed. Which variant you prefer is a matter of personal preference
+        # and can be configured, but once configured they should all resolve to the same
+        # user-preferred variant.
+        variants: list[str] = [
+            "Marvel's Agents of S.H.I.E.L.D.",
+            "Marvel's Agents of S H I E L D ",
+            "Marvel's Agents of SHIELD",
+            "Agents of S.H.I.E.L.D.",
+            "Agents of S H I E L D ",
+            "Agents of SHIELD",
+        ]
+
+        self.config.add_section("tv/series/transform")
+        for variant in variants:
+            with self.subTest(variant=variant):
+                self.config.set("tv/series/transform", variant, "Agents of SHIELD")
+                shield: nielsen.media.Media = nielsen.media.TV(
+                    None, series=variant, season=1, episode=1
+                )
+                self.assertEqual(
+                    "Agents of SHIELD",
+                    shield.transform("series"),
+                    "Series name should be transformed to match",
+                )
+
+    def test_transform_no_section(self):
+        """Log a warning and return the input if no config section found."""
+
+        with self.assertLogs("nielsen", logging.WARNING) as cm:
+            self.tv_all_data.transform("series")
+            self.assertIn("NO_TRANSFORM_SECTION", cm.records[0].getMessage())
+
+    def test_transform_no_option(self):
+        """Log a warning and return the input if no config option found."""
+
+        self.config.add_section("tv/series/transform")
+        with self.assertLogs("nielsen", logging.WARNING) as cm:
+            self.tv_all_data.transform("series")
+            self.assertIn("NO_TRANSFORM_OPTION", cm.records[0].getMessage())
+
+    def test_repr(self):
+        """Object representation should contain enough information to recreate an object."""
+
+        expected: str = "<TV(self.path=None, self.series='Ted Lasso', self.season=1, self.episode=3, self.title='Trent Crimm: The Independent')>"
+        self.assertEqual(expected, repr(self.tv_good_metadata_no_path))
 
     def test_str(self):
         """The string representation should provide a useful display name."""
@@ -454,32 +564,199 @@ class TestTV(unittest.TestCase):
             "TV object with all metadata",
         )
         self.assertEqual(
+            "Ted Lasso -01.03- Trent Crimm: The Independent",
+            str(self.tv_good_metadata_no_path),
+            "TV object with all metadata",
+        )
+        self.assertEqual(
             "Unknown -00.00- Unknown",
             str(self.tv_good_filename),
             "TV object with no metadata, but good filename",
         )
 
-    def test_infer_basic(self):
-        """A descriptive filename should populate the metadata."""
 
-        self.assertNotEqual(
-            self.tv_good_filename,
-            self.tv_all_data,
-            "Objects should differ before infer is called",
+class TestTVMaze(unittest.TestCase):
+    """Tests for the TVMaze."""
+
+    def setUp(self):
+        """Prepare reference objects for tests."""
+
+        self.config: ConfigParser = nielsen.config.config
+        nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
+
+        self.fetcher: nielsen.fetcher.TVMaze = nielsen.fetcher.TVMaze()
+        self.ted_lasso: nielsen.media.TV = nielsen.media.TV(series="Ted Lasso")
+        self.ted_lasso_id: int = 44458
+        self.agents_of_shield: nielsen.media.TV = nielsen.media.TV(
+            series="Agents of SHIELD"
         )
-        self.tv_good_filename.infer()
+        self.agents_of_shield_id: int = 31
+
+    def tearDown(self):
+        """Clean up after each test."""
+
+        self.config.clear()
+
+    def test_get_series_id_local(self):
+        """Get series ID from local config file."""
+
+        # Use a Mock to assert the right function was called by get_series_id.
+        self.fetcher.get_series_id_local = mock.MagicMock(
+            side_effect=self.fetcher.get_series_id_local
+        )
+
         self.assertEqual(
-            self.tv_good_filename,
-            self.tv_all_data,
-            "Objects should be identical after infer is called",
+            self.fetcher.get_series_id(self.ted_lasso),
+            self.ted_lasso_id,
+            "Should get ID from config file",
+        )
+        self.fetcher.get_series_id_local.assert_called()
+
+    @mock.patch("nielsen.fetcher.requests.get")
+    def test_get_series_id_remote_single(self, mock_get: mock.Mock):
+        """Get series ID from TVMaze API."""
+
+        # Clear the config to ensure the series isn't found locally
+        self.config.clear()
+
+        # Load test fixture with actual API results
+        resp: requests.Response = pickle.loads(
+            pathlib.Path("fixtures/tv/singlesearch-ted-lasso.pickle").read_bytes()
         )
 
-    def test_infer_all_patterns(self):
-        """Test every pattern and difficult edge cases."""
+        # Use a Mock to assert the right function was called by get_series_id.
+        self.fetcher.get_series_id_singlesearch = mock.MagicMock(
+            side_effect=self.fetcher.get_series_id_singlesearch
+        )
+
+        mock_get.return_value = resp
+        self.assertEqual(
+            self.fetcher.get_series_id(self.ted_lasso),
+            self.ted_lasso_id,
+            "Should get ID from TVMaze response",
+        )
+        self.fetcher.get_series_id_singlesearch.assert_called()
+
+    @mock.patch("builtins.input", side_effect="0")
+    @mock.patch("nielsen.fetcher.requests.get")
+    def test_get_series_id_remote_multiple(
+        self, mock_get: mock.Mock, mock_input: mock.Mock
+    ):
+        """Get series ID from TVMaze API."""
+
+        fixtures: list[dict[str, Any]] = [
+            {
+                "id": self.agents_of_shield_id,
+                "media": self.agents_of_shield,
+                "pickle": "fixtures/tv/search-agents-of-shield.pickle",
+            },
+            {
+                "id": self.ted_lasso_id,
+                "media": self.ted_lasso,
+                "pickle": "fixtures/tv/search-ted-lasso.pickle",
+            },
+        ]
+
+        for fixture in fixtures:
+            # Clear the config to ensure the series isn't found locally.
+            self.config.clear()
+
+            with self.subTest(fixture=fixture):
+                # Use a Mock to assert the right function was called by get_series_id.
+                self.fetcher.get_series_id_search = mock.MagicMock(
+                    side_effect=self.fetcher.get_series_id_search
+                )
+
+                # Load test fixture with actual API results.
+                resp: requests.models.Response = pickle.loads(
+                    pathlib.Path(fixture["pickle"]).read_bytes()
+                )
+
+                mock_get.return_value = resp
+
+                self.assertEqual(
+                    self.fetcher.get_series_id(
+                        media=fixture["media"], interactive=True
+                    ),
+                    fixture["id"],
+                    "Should get ID from TVMaze response",
+                )
+
+                self.fetcher.get_series_id_search.assert_called_with(fixture["media"])
+
+    @mock.patch("nielsen.fetcher.requests.get")
+    def test_get_episode_title(self, mock_get):
+        """Get the episode title for a given series, season, and episode number."""
+
+        self.ted_lasso.season = 1
+        self.ted_lasso.episode = 3
+        title: str = "Trent Crimm: The Independent"
+
+        mock_get.return_value = pickle.loads(
+            pathlib.Path(
+                "fixtures/tv/shows/44458/episodebynumber-season-1-number-3.pickle"
+            ).read_bytes()
+        )
+
+        self.assertEqual(self.fetcher.get_episode_title(self.ted_lasso), title)
+
+    @mock.patch("nielsen.fetcher.TVMaze.get_series_id")
+    def test_get_episode_title_errors(self, mock_series_id):
+        """Raise errors when insufficient information to search for episode titles."""
+
+        mock_series_id.return_value = None
+
+        empty: nielsen.media.TV = nielsen.media.TV(None)
+        with self.assertRaises(ValueError):
+            self.fetcher.get_episode_title(empty)
+
+        mock_series_id.return_value = 42
+        with self.assertRaises(ValueError):
+            self.fetcher.get_episode_title(empty)
+
+        empty.season = 1
+        with self.assertRaises(ValueError):
+            self.fetcher.get_episode_title(empty)
+
+    def test_set_series_id(self):
+        """Create a mapping between a series name and a TVMaze series ID."""
+
+        series: str = "Foo: The Series"
+        id: int = 42
+
+        # Clear the config to ensure things work properly even when there is no section
+        # for TVMaze IDs.
+        self.config.clear()
+
+        self.assertFalse(
+            self.config.has_option(self.fetcher.IDS, series),
+            "The option should not exist before setting.",
+        )
+
+        self.fetcher.set_series_id(series, id)
+        self.assertTrue(
+            self.config.has_option(self.fetcher.IDS, series),
+            "The section and option should both exist after setting.",
+        )
+
+    def test_fetch(self):
+        """Fetch and update metadata using information from the given `Media` object."""
+
+        self.assertEqual(self.ted_lasso.title, "", "Title should be empty.")
+
+        self.ted_lasso.season = 1
+        self.ted_lasso.episode = 3
+        self.fetcher.fetch(self.ted_lasso)
+
+        self.assertEqual(
+            self.ted_lasso.title,
+            "Trent Crimm: The Independent",
+            "Title should be correctly set after fetching.",
+        )
 
 
 if __name__ == "__main__":
     unittest.main()
 
 
-# vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab
+# vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab textwidth=88

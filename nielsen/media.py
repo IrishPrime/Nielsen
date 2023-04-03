@@ -15,6 +15,9 @@ filename) and updates the appropriate metadata attributes with this information.
 
 `Media.organize()`: A method that attempts to move the file to a new location, updates the
 `path` attribute on success, and returns this new value.
+
+`Media.metadata`: A property that returns all metadata as a dictionary, intended for
+ease of inspection and discovery.
 """
 
 import logging
@@ -54,6 +57,14 @@ class Media:
         repr=False,
         hash=False,
         compare=False,
+        metadata=None,
+    )
+    _metadata: dict[str, Any] = field(
+        default_factory=dict,
+        init=False,
+        repr=True,
+        hash=True,
+        compare=True,
         metadata=None,
     )
 
@@ -124,8 +135,9 @@ class Media:
 
     def infer(self) -> None:
         """Infer information about the object's metadata based on its filename. Does
-        some basic error checking and then calls the `infer_handler` method which each
-        subclass should implement to actually handle inferring and setting values."""
+        some basic error checking and then sets the various metadata fields using the
+        `metadata.setter` method which each subclass must implement to handle value
+        transformations and/or formatting."""
 
         if not self.path:
             logger.error("NO_PATH: No path from which to infer.")
@@ -138,10 +150,11 @@ class Media:
             return
 
         metadata: dict[str, Any] = self._match()
-        self.set_metadata(metadata)
+        self.metadata = metadata
 
     def _match(self) -> dict[str, Any]:
-        """Return the results of `Match.groupdict()` if the filename matched any of the patterns."""
+        """Return the results of `Match.groupdict()` if the filename matched any of the
+        patterns. Should only be called by `infer()`."""
 
         # Assert values here which have already been checked by Media.infer to avoid
         # type errors from the linter.
@@ -185,17 +198,48 @@ class Media:
 
         return self.path
 
-    def set_metadata(self, metadata: dict[str, Any]) -> bool:
-        """Infer information about the instance's metadata based on its filename and
-        update the instance's attributes to reflect those inferences. Should only be
-        called directly by the `infer` method."""
+    @property
+    def metadata(self) -> dict[str, Any]:
+        """Return the metadata property, a dictionary of information relevant to the
+        Media type."""
 
         raise NotImplementedError
+
+    @metadata.setter
+    def metadata(self, value: dict[str, Any]) -> None:
+        """Set the metadata property. Must be a dictionary, but subclasses should
+        implement their own transformations (if any) by implementing the set_metadata
+        method."""
+
+        raise NotImplementedError
+
+    def transform(self, field: str) -> str:
+        """Transform a field's value based on the corresponding config section. For
+        example, passing `field=series` for a `TV` object will look for an option in the
+        `tv/series/transform` section of the config matching `self.series`. If found,
+        `self.series` will be replaced with the option value. If not found, nothing
+        changes."""
+
+        section: str = f"{self.section}/{field}/transform"
+        option: str = getattr(self, field)
+
+        # Create the corresponding transform sub-section if it doesn't exist.
+        if not config.has_section(section):
+            logger.warning("NO_TRANSFORM_SECTION: %s", section)
+            return option
+
+        if not config.has_option(section, option):
+            logger.warning("NO_TRANSFORM_OPTION: %s", option)
+            return option
+
+        transformed: str = config.get(section, option)
+        logger.info("TRANSFORM: %s to %s", option, transformed)
+        return transformed
 
 
 @dataclass(order=True, slots=True)
 class TV(Media):
-    """A class just for TV shows."""
+    """A Media subclass for TV shows."""
 
     series: str = ""
     season: int = 0
@@ -235,21 +279,38 @@ class TV(Media):
             ),
         ]
 
-    def set_metadata(self, metadata: dict[str, Any]) -> bool:
-        """Infer information about the object's metadata based on its filename."""
+    @property
+    def metadata(self) -> dict[str, Any]:
+        """Return a dictionary of metadata relevant to the TV type."""
+
+        return {
+            "series": self.series,
+            "season": self.season,
+            "episode": self.episode,
+            "title": self.title,
+        }
+
+    @metadata.setter
+    def metadata(self, metadata: dict[str, Any]) -> None:
+        """Transform values from the given metadata dictionary and use it to set the
+        object's fields."""
 
         self.series = metadata["series"].replace(".", " ").strip()
+        self.series = self.transform("series")
         self.season = int(metadata["season"])
         self.episode = int(metadata["episode"])
         self.title = metadata["title"].replace(".", " ").strip()
-
-        return True
 
     def __str__(self) -> str:
         """Return a friendly, human-readable version of the file metadata, fit for
         renaming or display purposes."""
 
         return f"{self.series or 'Unknown'} -{self.season:02d}.{self.episode:02d}- {self.title or 'Unknown'}"
+
+    def __repr__(self) -> str:
+        """Return a string with enough information to recreate the object."""
+
+        return f"<{self.__class__.__name__}({self.path=}, {self.series=}, {self.season=}, {self.episode=}, {self.title=})>"
 
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab

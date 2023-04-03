@@ -4,17 +4,24 @@
 
 ### Media
 
-`Media` objects represent a file to be managed and its metadata. The `Media`
-class itself is an abstract base class from which subtypes should be derived.
+`Media` objects represent a file to be managed and its metadata. While the base
+`Media` class can be instantiated, it's not especially useful on its own,
+serving primarily as a workable starting point from which subtypes should be
+derived.
+
+The base `Media` class defines the following attributes and methods:
 
 1. `path`: A `pathlib.Path` which represents the actual location of the file on
    disk. This value is optional, and falsey values should set it to `None`.
-2. `infer`: A method which attempts to infer metadata about the file (e.g. from
+1. `patterns`: A list of compiled regular expression `Pattern`s that are
+   considered when attempting to infer metadata information about the object
+   based on the filename (`path`).
+1. `infer`: A method which attempts to infer metadata about the file (e.g. from
    its filename) and updates the appropriate metadata attributes with this
    information.
-3. `organize`: A method which attempts to move the file to a new location,
+1. `organize`: A method which attempts to move the file to a new location,
    updates the `path` attribute on success, and returning this new value.
-4. `metadata`: A property which returns all metadata as a dictionary, intended
+1. `metadata`: A property which returns all metadata as a dictionary, intended
    for ease of inspection and discovery.
 
 The metadata keys are not defined as part of this base class because all types
