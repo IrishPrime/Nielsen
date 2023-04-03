@@ -8,6 +8,11 @@ from typing import Optional
 logger: logging.Logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+CONFIG_FILE_LOCATIONS: list[str | pathlib.Path] = [
+    "/etc/nielsen/config.ini",
+    pathlib.Path("~/.config/nielsen/config.ini").expanduser(),
+]
+
 config: ConfigParser = ConfigParser(converters={"path": pathlib.Path})
 # Set default options
 config["DEFAULT"] = {
@@ -38,17 +43,14 @@ def load_config(path: Optional[pathlib.Path] = None) -> ConfigParser:
     """Load a configuration from a file. If no file path is provided, default
     configuration file locations are used. Returns a ConfigParser object."""
 
+    global config
+    files: list[str]
+
     if not path:
-        files: list[str] = config.read(
-            [
-                "/etc/nielsen/config.ini",
-                pathlib.Path("~/.config/nielsen/config.ini").expanduser(),
-                pathlib.Path("~/.nielsen/config.ini").expanduser(),
-            ]
-        )
+        files = config.read(CONFIG_FILE_LOCATIONS)
         logger.debug("Loaded configuration from default locations: %s", files)
     else:
-        files: list[str] = config.read(str(path))
+        files = config.read(str(path))
         if files:
             logger.debug("Loaded configuration from: %s", files)
         else:
@@ -60,8 +62,19 @@ def load_config(path: Optional[pathlib.Path] = None) -> ConfigParser:
 def write_config(path: pathlib.Path) -> None:
     """Write the global configuration object to the given `path`."""
 
+    global config
+
     with open(path, mode="w") as file:
         config.write(file)
+
+
+def update_config(path: pathlib.Path) -> None:  # pragma: no cover
+    """Write new data to the config file without changing options already present in the
+    config files. By re-reading the config files before writing, runtime options or
+    other dynamic changes to the config will be reverted before the file is written."""
+
+    load_config()
+    write_config(pathlib.Path("~/.config/nielsen/config.ini").expanduser())
 
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab

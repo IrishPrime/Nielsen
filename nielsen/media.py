@@ -203,11 +203,6 @@ class Media:
         """Return the metadata property, a dictionary of information relevant to the
         Media type."""
 
-        return self._get_metadata()
-
-    def _get_metadata(self):
-        """Override in subclasses."""
-
         raise NotImplementedError
 
     @metadata.setter
@@ -215,11 +210,6 @@ class Media:
         """Set the metadata property. Must be a dictionary, but subclasses should
         implement their own transformations (if any) by implementing the set_metadata
         method."""
-
-        self._set_metadata(value)
-
-    def _set_metadata(self, metadata: dict[str, Any]) -> bool:
-        """Override in subclasses."""
 
         raise NotImplementedError
 
@@ -289,7 +279,8 @@ class TV(Media):
             ),
         ]
 
-    def _get_metadata(self) -> dict[str, Any]:
+    @property
+    def metadata(self) -> dict[str, Any]:
         """Return a dictionary of metadata relevant to the TV type."""
 
         return {
@@ -299,7 +290,8 @@ class TV(Media):
             "title": self.title,
         }
 
-    def _set_metadata(self, metadata: dict[str, Any]) -> None:
+    @metadata.setter
+    def metadata(self, metadata: dict[str, Any]) -> None:
         """Transform values from the given metadata dictionary and use it to set the
         object's fields."""
 
