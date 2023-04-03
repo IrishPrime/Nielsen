@@ -17,11 +17,10 @@ import nielsen.config
 import nielsen.fetcher
 import nielsen.media
 
-unittest.util._MAX_LENGTH = 2000
+unittest.util._MAX_LENGTH = 2048
 
 logger: logging.Logger = logging.getLogger("nielsen")
-# logger.addHandler(logging.StreamHandler())
-# logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.NOTSET)
 
 
 class TestConfig(unittest.TestCase):
@@ -565,6 +564,11 @@ class TestTV(unittest.TestCase):
             "TV object with all metadata",
         )
         self.assertEqual(
+            "Ted Lasso -01.03- Trent Crimm: The Independent",
+            str(self.tv_good_metadata_no_path),
+            "TV object with all metadata",
+        )
+        self.assertEqual(
             "Unknown -00.00- Unknown",
             str(self.tv_good_filename),
             "TV object with no metadata, but good filename",
@@ -596,7 +600,7 @@ class TestTVMaze(unittest.TestCase):
     def test_get_series_id_local(self):
         """Get series ID from local config file."""
 
-        # Use a Mock to assert the right function was called.
+        # Use a Mock to assert the right function was called by get_series_id.
         self.fetcher.get_series_id_local = mock.MagicMock(
             side_effect=self.fetcher.get_series_id_local
         )
@@ -616,11 +620,11 @@ class TestTVMaze(unittest.TestCase):
         self.config.clear()
 
         # Load test fixture with actual API results
-        resp: requests.models.Response = pickle.loads(
+        resp: requests.Response = pickle.loads(
             pathlib.Path("fixtures/tv/singlesearch-ted-lasso.pickle").read_bytes()
         )
 
-        # Use a Mock to assert the right function was called.
+        # Use a Mock to assert the right function was called by get_series_id.
         self.fetcher.get_series_id_singlesearch = mock.MagicMock(
             side_effect=self.fetcher.get_series_id_singlesearch
         )
@@ -640,34 +644,119 @@ class TestTVMaze(unittest.TestCase):
     ):
         """Get series ID from TVMaze API."""
 
-        # Clear the config to ensure the series isn't found locally
+        fixtures: list[dict[str, Any]] = [
+            {
+                "id": self.agents_of_shield_id,
+                "media": self.agents_of_shield,
+                "pickle": "fixtures/tv/search-agents-of-shield.pickle",
+            },
+            {
+                "id": self.ted_lasso_id,
+                "media": self.ted_lasso,
+                "pickle": "fixtures/tv/search-ted-lasso.pickle",
+            },
+        ]
+
+        for fixture in fixtures:
+            # Clear the config to ensure the series isn't found locally.
+            self.config.clear()
+
+            with self.subTest(fixture=fixture):
+                # Use a Mock to assert the right function was called by get_series_id.
+                self.fetcher.get_series_id_search = mock.MagicMock(
+                    side_effect=self.fetcher.get_series_id_search
+                )
+
+                # Load test fixture with actual API results.
+                resp: requests.models.Response = pickle.loads(
+                    pathlib.Path(fixture["pickle"]).read_bytes()
+                )
+
+                mock_get.return_value = resp
+
+                self.assertEqual(
+                    self.fetcher.get_series_id(
+                        media=fixture["media"], interactive=True
+                    ),
+                    fixture["id"],
+                    "Should get ID from TVMaze response",
+                )
+
+                self.fetcher.get_series_id_search.assert_called_with(fixture["media"])
+
+    @mock.patch("nielsen.fetcher.requests.get")
+    def test_get_episode_title(self, mock_get):
+        """Get the episode title for a given series, season, and episode number."""
+
+        self.ted_lasso.season = 1
+        self.ted_lasso.episode = 3
+        title: str = "Trent Crimm: The Independent"
+
+        mock_get.return_value = pickle.loads(
+            pathlib.Path(
+                "fixtures/tv/shows/44458/episodebynumber-season-1-number-3.pickle"
+            ).read_bytes()
+        )
+
+        self.assertEqual(self.fetcher.get_episode_title(self.ted_lasso), title)
+
+    @mock.patch("nielsen.fetcher.TVMaze.get_series_id")
+    def test_get_episode_title_errors(self, mock_series_id):
+        """Raise errors when insufficient information to search for episode titles."""
+
+        mock_series_id.return_value = None
+
+        empty: nielsen.media.TV = nielsen.media.TV(None)
+        with self.assertRaises(ValueError):
+            self.fetcher.get_episode_title(empty)
+
+        mock_series_id.return_value = 42
+        with self.assertRaises(ValueError):
+            self.fetcher.get_episode_title(empty)
+
+        empty.season = 1
+        with self.assertRaises(ValueError):
+            self.fetcher.get_episode_title(empty)
+
+    def test_set_series_id(self):
+        """Create a mapping between a series name and a TVMaze series ID."""
+
+        series: str = "Foo: The Series"
+        id: int = 42
+
+        # Clear the config to ensure things work properly even when there is no section
+        # for TVMaze IDs.
         self.config.clear()
 
-        # Load test fixture with actual API results
-        resp: requests.models.Response = pickle.loads(
-            pathlib.Path("fixtures/tv/search-agents-of-shield.pickle").read_bytes()
+        self.assertFalse(
+            self.config.has_option(self.fetcher.IDS, series),
+            "The option should not exist before setting.",
         )
 
-        # Use a Mock to assert the right function was called.
-        self.fetcher.get_series_id_search = mock.MagicMock(
-            side_effect=self.fetcher.get_series_id_search
+        self.fetcher.set_series_id(series, id)
+        self.assertTrue(
+            self.config.has_option(self.fetcher.IDS, series),
+            "The section and option should both exist after setting.",
         )
-
-        mock_get.return_value = resp
-        self.assertEqual(
-            self.fetcher.get_series_id(media=self.agents_of_shield, interactive=True),
-            self.agents_of_shield_id,
-            "Should get ID from TVMaze response",
-        )
-
-        self.fetcher.get_series_id_search.assert_called()
 
     def test_fetch(self):
-        """Method not implemented for base Fetcher Protocol."""
+        """Fetch and update metadata using information from the given `Media` object."""
+
+        self.assertEqual(self.ted_lasso.title, "", "Title should be empty.")
+
+        self.ted_lasso.season = 1
+        self.ted_lasso.episode = 3
+        self.fetcher.fetch(self.ted_lasso)
+
+        self.assertEqual(
+            self.ted_lasso.title,
+            "Trent Crimm: The Independent",
+            "Title should be correctly set after fetching.",
+        )
 
 
 if __name__ == "__main__":
     unittest.main()
 
 
-# vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab
+# vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab textwidth=88
