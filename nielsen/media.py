@@ -24,6 +24,7 @@ import logging
 import pathlib
 import re
 from dataclasses import dataclass, field
+from string import capwords
 from typing import Any, Optional, Pattern
 
 from nielsen.config import config
@@ -208,7 +209,7 @@ class Media:
     @metadata.setter
     def metadata(self, value: dict[str, Any]) -> None:
         """Set the metadata property. Must be a dictionary, but subclasses should
-        implement their own transformations (if any) by implementing the set_metadata
+        implement their own transformations (if any) by implementing this setter
         method."""
 
         raise NotImplementedError
@@ -216,11 +217,11 @@ class Media:
     def transform(self, field: str) -> str:
         """Transform a field's value based on the corresponding config section. For
         example, passing `field=series` for a `TV` object will look for an option in the
-        `tv/series/transform` section of the config matching `self.series`. If found,
+        `tv/transform/series` section of the config matching `self.series`. If found,
         `self.series` will be replaced with the option value. If not found, nothing
         changes."""
 
-        section: str = f"{self.section}/{field}/transform"
+        section: str = f"{self.section}/transform/{field}"
         option: str = getattr(self, field)
 
         # Create the corresponding transform sub-section if it doesn't exist.
@@ -234,6 +235,7 @@ class Media:
 
         transformed: str = config.get(section, option)
         logger.info("TRANSFORM: %s to %s", option, transformed)
+
         return transformed
 
 
@@ -252,12 +254,12 @@ class TV(Media):
         self.patterns = [
             # The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4
             re.compile(
-                r"(?P<series>.+)\.+(?P<year>\d{4})\.(?P<season>\d{1,2})(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$",
+                r"(?P<series>.+?)\.+(?P<year>\d{4}|\(\d{4}\))?\.(?P<season>\d{1,2})(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$",
                 re.IGNORECASE,
             ),
             # The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi
             re.compile(
-                r"(?P<series>.+)\.+S(?P<season>\d{2})\.?E(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$",
+                r"(?P<series>.+?)\.+(?P<year>\d{4}|\(\d{4}\))?\.*S(?P<season>\d{2})\.?E(?P<episode>\d{2})\.*(?P<title>.*)?\.+(?P<extension>\w+)$",
                 re.IGNORECASE,
             ),
             # the.glades.201.family.matters.hdtv.xvid-fqm.avi
@@ -275,7 +277,7 @@ class TV(Media):
             ),
             # Last ditch effort to get essential information
             re.compile(
-                r"(?P<series>.+)S(?P<season>\d{1,2})E(?P<episode>\d{2,}).*\.(?P<extension>.+)$"
+                r"(?P<series>.+)S(?P<season>\d{1,2})E(?P<episode>\d{2,})(?P<title>.*)\.(?P<extension>.+)$"
             ),
         ]
 
@@ -295,11 +297,17 @@ class TV(Media):
         """Transform values from the given metadata dictionary and use it to set the
         object's fields."""
 
-        self.series = metadata["series"].replace(".", " ").strip()
+        self.series = metadata.get("series", "").replace(".", " ").strip().title()
         self.series = self.transform("series")
-        self.season = int(metadata["season"])
-        self.episode = int(metadata["episode"])
-        self.title = metadata["title"].replace(".", " ").strip()
+        self.season = int(metadata.get("season", 0))
+        self.episode = int(metadata.get("episode", 0))
+        self.title = metadata.get("title", "").replace(".", " ").strip()
+
+        tags: re.Pattern = re.compile(
+            r"\(?(1080p|720p|HDTV|WEB|PROPER|REPACK|RERIP)\)?.*", re.IGNORECASE
+        )
+        # Use string.capwords() rather than str.title() to properly handle letters after apostrophes.
+        self.title = capwords(re.sub(tags, "", self.title).strip())
 
     def __str__(self) -> str:
         """Return a friendly, human-readable version of the file metadata, fit for
