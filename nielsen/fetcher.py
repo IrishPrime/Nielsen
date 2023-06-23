@@ -38,10 +38,9 @@ class TVMaze:
         series_id: Optional[int] = self.get_series_id(
             media, config.getboolean("DEFAULT", "interactive")
         )
-        self.set_series_id(media.series, str(series_id))
+        if series_id:
+            self.set_series_id(media.series, str(series_id))
         media.title = self.get_episode_title(media)
-
-        # Reloading the config
 
     def set_series_id(self, series: str, id: int | str) -> None:
         """Create a mapping from a series name to a TVMaze series ID in the config."""
@@ -55,9 +54,7 @@ class TVMaze:
 
         config.set(self.IDS, series, str(id))
 
-    def get_series_id(
-        self, media: nielsen.media.TV, interactive: bool = False
-    ) -> Optional[int]:
+    def get_series_id(self, media: nielsen.media.TV, interactive: bool = False) -> int:
         """Return the TVMaze ID for the series. Will check for a local config file first
         and search TVMaze if a local match isn't found. Optionally, prompt the user to
         select the correct series interactively if multiple results are found."""
@@ -69,17 +66,17 @@ class TVMaze:
         else:
             lookup = self.get_series_id_singlesearch
 
-        series_id: Optional[int] = lookup(media)
+        series_id: int = lookup(media)
         logger.debug("Series: %s, ID: %s", media.series, series_id)
 
         return series_id
 
-    def get_series_id_local(self, media: nielsen.media.TV) -> Optional[int]:
+    def get_series_id_local(self, media: nielsen.media.TV) -> int:
         """Get the series ID from the configuration."""
 
-        return config.getint(self.IDS, media.series, fallback=None)
+        return config.getint(self.IDS, media.series, fallback=0)
 
-    def get_series_id_search(self, media: nielsen.media.TV) -> Optional[int]:
+    def get_series_id_search(self, media: nielsen.media.TV) -> int:
         """Get the series ID from the TVMaze `search` endpoint, which can return
         multiple results. If multiple results are returned, prompt the user to pick one.
         URL: /search/shows?q=:query.
@@ -93,25 +90,20 @@ class TVMaze:
 
         logging.debug("Media: %r\nRequest: %r\nResponse: %s", media, request, rjson)
 
-        series_id: Optional[int] = None
-        # If TVMaze returns an empty list, return None.
+        series_id: int = 0
+        # If TVMaze returns an empty list, return 0.
         if not rjson:
             return series_id
 
         # If only one result, add it to the config and return the ID.
         if len(rjson) == 1:
-            try:
-                series_id = rjson[0]["show"]["id"]
-            except KeyError:
-                logger.exception("Unexpected data structure.")
-
-            return series_id
+            return rjson[0]["show"]["id"]
 
         # If multiple results, offer a means of selecting the correct one.
         # TODO: The nature of the picker should be left up to the frontend
         # implementation, but a console prompt is sufficient for now since the console
         # frontend will be the first (and maybe only) implementation.
-        print(f"Search results for: {media.series}")
+        print(f"Search results for: {media.series} ({media.path})")
         for option, result in enumerate(rjson):
             name: str = result["show"]["name"]
             series_id = result["show"]["id"]
@@ -125,7 +117,7 @@ class TVMaze:
         series_id = rjson[selection]["show"]["id"]
         return series_id
 
-    def get_series_id_singlesearch(self, media: nielsen.media.TV) -> Optional[int]:
+    def get_series_id_singlesearch(self, media: nielsen.media.TV) -> int:
         """Get the series ID from the TVMaze `singlesearch` endpoint, which returns a
         single result that it considers the best match.
         URL: /singlesearch/shows?q=:query
@@ -134,12 +126,12 @@ class TVMaze:
         request: str = f"{self.SERVICE}/singlesearch/shows/?q={urllib.parse.quote_plus(media.series)}"
         response: requests.Response = requests.get(request)
         rjson: dict[Any, Any] = response.json()
-
         logger.debug("Media: %r\nRequest: %r\nResponse: %s", media, request, rjson)
 
-        series_id: Optional[int] = rjson.get("id")
+        if response.ok:
+            return rjson.get("id", 0)
 
-        return series_id
+        return 0
 
     def get_episode_title(self, media: nielsen.media.TV) -> str:
         """Return the episode title for the given media object from the TVMaze API.
@@ -147,6 +139,7 @@ class TVMaze:
         """
 
         series_id: Optional[int] = self.get_series_id(media)
+        episode_title: str = ""
 
         if not series_id:
             raise ValueError("No Series ID")
@@ -160,10 +153,12 @@ class TVMaze:
         request: str = f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={media.season}&number={media.episode}"
         response: requests.Response = requests.get(request)
         rjson: dict[Any, Any] = response.json()
-
         logging.debug("Media: %r\nRequest: %r\nResponse: %s", media, request, rjson)
 
-        return str(rjson.get("name"))
+        if response.ok:
+            episode_title = str(rjson.get("name"))
+
+        return episode_title
 
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab textwidth=88

@@ -473,6 +473,169 @@ class TestTV(unittest.TestCase):
     def test_infer_all_patterns(self):
         """Test every pattern and difficult edge cases."""
 
+        media: dict[str, dict[str, str | int]] = {
+            # Not quite formatted correctly for TV
+            "Something.Close.12.mp4": {
+                "series": "",
+                "season": 0,
+                "episode": 0,
+                "title": "",
+            },
+            # Very nicely formatted
+            "The.Glades.S02E01.Family.Matters.HDTV.XviD-FQM.avi": {
+                "series": "The Glades",
+                "season": 2,
+                "episode": 1,
+                "title": "Family Matters",
+            },
+            # Needs title casing
+            "the.glades.s02e01.family.matters.hdtv.xvid-fqm.avi": {
+                "series": "The Glades",
+                "season": 2,
+                "episode": 1,
+                "title": "Family Matters",
+            },
+            # Missing title
+            "The.Glades.S02E01.HDTV.XviD-FQM.avi": {
+                "series": "The Glades",
+                "season": 2,
+                "episode": 1,
+                "title": "",
+            },
+            # Already processed by nielsen
+            "The Glades -02.01- Family Matters.avi": {
+                "series": "The Glades",
+                "season": 2,
+                "episode": 1,
+                "title": "Family Matters",
+            },
+            # Another common post-processing format
+            "The Glades -201- Family Matters.avi": {
+                "series": "The Glades",
+                "season": 2,
+                "episode": 1,
+                "title": "Family Matters",
+            },
+            # Four digit season/episode code, fewer hyphens
+            "Firefly 0101 - Serenity.mkv": {
+                "series": "Firefly",
+                "season": 1,
+                "episode": 1,
+                "title": "Serenity",
+            },
+            # Has most necessary information, but formatted strangely
+            "Supernatural.S10E15.mp4": {
+                "series": "Supernatural",
+                "season": 10,
+                "episode": 15,
+                "title": "",
+            },
+            # Same as above, but with an extra dot between season and episode
+            "Pushing.Daisies.S02.E03.mp4": {
+                "series": "Pushing Daisies",
+                "season": 2,
+                "episode": 3,
+                "title": "",
+            },
+            # Nicely formatted, but with an apostrophe in the title
+            "Person.of.Interest.S0310.The.Devil's.Share.HDTV.avi": {
+                "series": "Person of Interest",
+                "season": 3,
+                "episode": 10,
+                "title": "The Devil's Share",
+            },
+            # Ensure title casing with the apostrophe works well
+            "person.of.interest.s03e10.the.devil's.share.hdtv.avi": {
+                "series": "Person of Interest",
+                "season": 3,
+                "episode": 10,
+                "title": "The Devil's Share",
+            },
+            # Testing WEB-RiP tag and series filtering
+            "Castle.(2009).S07E18.At.Close.Range.720p.WEB-RiP.mp4": {
+                "series": "Castle",
+                "season": 7,
+                "episode": 18,
+                "title": "At Close Range",
+            },
+            # Same as above, but with all fields
+            "Castle.(2009).S01E01.Flowers.for.Your.Grave.720p.WEB-RiP.mp4": {
+                "series": "Castle",
+                "season": 1,
+                "episode": 1,
+                "title": "Flowers For Your Grave",
+            },
+            # Four digit season and episode combination
+            "supernatural.1117.red.meat.hdtv-lol[ettv].mp4": {
+                "series": "Supernatural",
+                "season": 11,
+                "episode": 17,
+                "title": "Red Meat",
+            },
+            # Specifying file within a directory
+            "supernatural.1117.hdtv-lol[ettv]/supernatural.1117.red.meat.hdtv-lol[ettv].mp4": {
+                "series": "Supernatural",
+                "season": 11,
+                "episode": 17,
+                "title": "Red Meat",
+            },
+            # Four digit year followed by three digit season and episode combination
+            "the.flash.(2014).217.flash.back.hdtv-lol[ettv].mp4": {
+                "series": "The Flash",
+                "season": 2,
+                "episode": 17,
+                "title": "Flash Back",
+            },
+            # Four digit year with season and episode markers
+            "The.Flash.2014.S02E17.Flash.Back.HDTV.x264-LOL[ettv].mp4": {
+                "series": "The Flash",
+                "season": 2,
+                "episode": 17,
+                "title": "Flash Back",
+            },
+            # Four digit year followed by three digit season and episode combination
+            "The.Flash.2014.217.Flash.Back.HDTV.x264-LOL[ettv].mp4": {
+                "series": "The Flash",
+                "season": 2,
+                "episode": 17,
+                "title": "Flash Back",
+            },
+            # Tag removal
+            "Game.of.Thrones.S06E07.The.Broken.Man.1080p.HDTV.6CH.ShAaNiG.mkv": {
+                "series": "Game of Thrones",
+                "season": 6,
+                "episode": 7,
+                "title": "The Broken Man",
+            },
+            # File in a subdirectory
+            "Game.of.Thrones.S07E01.720p.HDTV.x264-AVS[rarbg]/Game.of.Thrones.S07E01.Dragonstone.720p.HDTV.x264-AVS.mkv": {
+                "series": "Game of Thrones",
+                "season": 7,
+                "episode": 1,
+                "title": "Dragonstone",
+            },
+            # Single episode with what looks like a second episode marker in the title
+            "Sample.Show.S01E01.E19.Protocol.720p.HDTV.X264-DIMENSION.mkv": {
+                "series": "Sample Show",
+                "season": 1,
+                "episode": 1,
+                "title": "E19 Protocol",
+            },
+            # Unusual filename for last ditch effort pattern
+            "Limitless S01E11 This Is Your Brian on Drugs (1080p x265 Joy).mkv": {
+                "series": "Limitless",
+                "season": 1,
+                "episode": 11,
+                "title": "This Is Your Brian On Drugs",
+            },
+        }
+
+        for filename, metadata in media.items():
+            tv: nielsen.media.TV = nielsen.media.TV(pathlib.Path(filename))
+            with self.subTest("Inferred metadata mismatch", tv=tv, metadata=metadata):
+                tv.infer()
+                self.assertDictEqual(tv.metadata, metadata)
+
     def test_ordering(self):
         """Items should be sorted by season, then episode number."""
 
@@ -516,10 +679,11 @@ class TestTV(unittest.TestCase):
             "Agents of SHIELD",
         ]
 
-        self.config.add_section("tv/series/transform")
+        self.config.clear()
+        self.config.add_section("tv/transform/series")
         for variant in variants:
             with self.subTest(variant=variant):
-                self.config.set("tv/series/transform", variant, "Agents of SHIELD")
+                self.config.set("tv/transform/series", variant, "Agents of SHIELD")
                 shield: nielsen.media.Media = nielsen.media.TV(
                     None, series=variant, season=1, episode=1
                 )
@@ -532,6 +696,8 @@ class TestTV(unittest.TestCase):
     def test_transform_no_section(self):
         """Log a warning and return the input if no config section found."""
 
+        self.config.clear()
+
         with self.assertLogs("nielsen", logging.WARNING) as cm:
             self.tv_all_data.transform("series")
             self.assertIn("NO_TRANSFORM_SECTION", cm.records[0].getMessage())
@@ -539,7 +705,8 @@ class TestTV(unittest.TestCase):
     def test_transform_no_option(self):
         """Log a warning and return the input if no config option found."""
 
-        self.config.add_section("tv/series/transform")
+        self.config.clear()
+        self.config.add_section("tv/transform/series")
         with self.assertLogs("nielsen", logging.WARNING) as cm:
             self.tv_all_data.transform("series")
             self.assertIn("NO_TRANSFORM_OPTION", cm.records[0].getMessage())
@@ -614,14 +781,16 @@ class TestTVMaze(unittest.TestCase):
 
     @mock.patch("nielsen.fetcher.requests.get")
     def test_get_series_id_remote_single(self, mock_get: mock.Mock):
-        """Get series ID from TVMaze API."""
+        """Get series ID from TVMaze API with single result."""
 
         # Clear the config to ensure the series isn't found locally
         self.config.clear()
 
         # Load test fixture with actual API results
-        resp: requests.Response = pickle.loads(
-            pathlib.Path("fixtures/tv/singlesearch-ted-lasso.pickle").read_bytes()
+        resp_ok: requests.Response = pickle.loads(
+            pathlib.Path(
+                "fixtures/tv/singlesearch/shows-q-ted+lasso.pickle"
+            ).read_bytes()
         )
 
         # Use a Mock to assert the right function was called by get_series_id.
@@ -629,31 +798,53 @@ class TestTVMaze(unittest.TestCase):
             side_effect=self.fetcher.get_series_id_singlesearch
         )
 
-        mock_get.return_value = resp
+        mock_get.return_value = resp_ok
         self.assertEqual(
             self.fetcher.get_series_id(self.ted_lasso),
             self.ted_lasso_id,
             "Should get ID from TVMaze response",
         )
-        self.fetcher.get_series_id_singlesearch.assert_called()
+        self.fetcher.get_series_id_singlesearch.assert_called_once()
 
-    @mock.patch("builtins.input", side_effect="0")
+        # Ensure a bad response returns a 0 for the Series ID
+        resp_not_ok: requests.Response = requests.Response()
+        resp_not_ok: requests.Response = pickle.loads(
+            pathlib.Path(
+                "fixtures/tv/singlesearch/shows-q-useless+search+string.pickle"
+            ).read_bytes()
+        )
+        self.fetcher.get_series_id_singlesearch.reset_mock()
+        mock_get.return_value = resp_not_ok
+        self.assertEqual(
+            self.fetcher.get_series_id(self.ted_lasso),
+            0,
+            "Should return 0 on a 'not ok' TVMaze response",
+        )
+        self.fetcher.get_series_id_singlesearch.assert_called_once()
+
+    @mock.patch("builtins.input")
     @mock.patch("nielsen.fetcher.requests.get")
     def test_get_series_id_remote_multiple(
         self, mock_get: mock.Mock, mock_input: mock.Mock
     ):
-        """Get series ID from TVMaze API."""
+        """Get series ID from TVMaze API with multiple results."""
 
+        mock_input.side_effect = "0"
         fixtures: list[dict[str, Any]] = [
             {
                 "id": self.agents_of_shield_id,
                 "media": self.agents_of_shield,
-                "pickle": "fixtures/tv/search-agents-of-shield.pickle",
+                "pickle": "fixtures/tv/search/shows-q-agents+of+shield.pickle",
             },
             {
                 "id": self.ted_lasso_id,
                 "media": self.ted_lasso,
-                "pickle": "fixtures/tv/search-ted-lasso.pickle",
+                "pickle": "fixtures/tv/search/shows-q-ted+lasso.pickle",
+            },
+            {
+                "id": 0,
+                "media": nielsen.media.TV(series="Useless Search String"),
+                "pickle": "fixtures/tv/search/shows-q-useless+search+string.pickle",
             },
         ]
 

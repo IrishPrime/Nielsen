@@ -74,7 +74,7 @@ def update_config(path: pathlib.Path) -> None:  # pragma: no cover
     other dynamic changes to the config will be reverted before the file is written."""
 
     load_config()
-    write_config(pathlib.Path("~/.config/nielsen/config.ini").expanduser())
+    write_config(path.expanduser())
 
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab

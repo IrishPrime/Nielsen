@@ -41,11 +41,10 @@ def tvmaze() -> None:
     TRANSLATION = str.maketrans({" ": "-", "=": "-", "&": "-"})
     queries: list[dict[str, str]] = [
         {"api": "singlesearch/shows", "params": "q=Ted+Lasso"},
+        {"api": "singlesearch/shows", "params": "q=useless+search+string"},
         {"api": "search/shows", "params": "q=Ted+Lasso"},
-        {
-            "api": "search/shows",
-            "params": "q=Agents+of+SHIELD",
-        },
+        {"api": "search/shows", "params": "q=useless+search+string"},
+        {"api": "search/shows", "params": "q=Agents+of+SHIELD"},
         {"api": "shows/44458/episodebynumber", "params": "season=1&number=3"},
     ]
 
@@ -57,8 +56,7 @@ def tvmaze() -> None:
 
         logger.debug(response.json())
 
-        if response.ok:
-            pickle_data(response, path)
+        pickle_data(response, path)
 
 
 if __name__ == "__main__":
