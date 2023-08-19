@@ -30,8 +30,18 @@ don't have an album name, movies don't have an episode number, music doesn't
 have a season, etc. As such, each subtype is free to define its own metadata,
 but that metadata should exposed as instance attributes.
 
-### MetadataFetcher
+### Fetcher
 
-`MetadataFetcher` objects are used to fetch metadata from sources which aren't
+The `Fetcher` Protocol is used to fetch metadata from sources which aren't
 intrinsic to the `Media` object (e.g. making an external API request to TVMaze,
 IMDB, etc.).
+
+Other classes must implement their own `fetch` method to conform to this
+protocol.
+
+
+```python
+def fetch(self, media: nielsen.media.Media) -> None:
+    """Fetch and update metadata using information from the given `Media` object."""
+    ...
+```

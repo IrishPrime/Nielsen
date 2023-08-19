@@ -13,8 +13,8 @@ This value is optional, and falsey values should set it to `None`.
 `Media.infer()`: A method that attempts to infer metadata about the file (e.g. from its
 filename) and updates the appropriate metadata attributes with this information.
 
-`Media.organize()`: A method that attempts to move the file to a new location, updates the
-`path` attribute on success, and returns this new value.
+`Media.organize()`: A method that attempts to move the file to a new location, updates
+the `path` attribute on success, and returns this new value.
 
 `Media.metadata`: A property that returns all metadata as a dictionary, intended for
 ease of inspection and discovery.
@@ -214,6 +214,13 @@ class Media:
 
         raise NotImplementedError
 
+    def rename(self) -> pathlib.Path:
+        """Rename the file associated with this Media object, but do not change its
+        parent directory. Return the new location as a Path object. This makes no sense
+        for the base Media class, but should be implemented by subclasses."""
+
+        raise NotImplementedError
+
     def transform(self, field: str) -> str:
         """Transform a field's value based on the corresponding config section. For
         example, passing `field=series` for a `TV` object will look for an option in the
@@ -309,6 +316,26 @@ class TV(Media):
         # Use string.capwords() rather than str.title() to properly handle letters after apostrophes.
         self.title = capwords(re.sub(tags, "", self.title).strip())
 
+    def rename(self) -> pathlib.Path:
+        """Rename the file associated with this Media object, but do not change its
+        parent directory. Return the new location as a Path object."""
+
+        if not self.path or not self.path.exists():
+            raise FileNotFoundError(self.path)
+
+        dest: pathlib.Path = self.path.with_stem(f"{self!s}")
+        logger.info("Renaming %s → %s", self.path, dest)
+
+        if dest.exists():
+            if self.path.samefile(dest):
+                logger.info("File already named correctly.")
+                return self.path
+            else:
+                raise FileExistsError(dest)
+
+        self.path = self.path.rename(dest)
+        return self.path
+
     def __str__(self) -> str:
         """Return a friendly, human-readable version of the file metadata, fit for
         renaming or display purposes."""
@@ -321,4 +348,4 @@ class TV(Media):
         return f"<{self.__class__.__name__}({self.path=}, {self.series=}, {self.season=}, {self.episode=}, {self.title=})>"
 
 
-# vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab
+# vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab textwidth=88
