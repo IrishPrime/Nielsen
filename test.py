@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """Unit tests for the Nielsen library."""
 
 import logging
@@ -290,6 +291,13 @@ class TestMedia(unittest.TestCase):
             ):
                 self.assertListEqual([], media.patterns)
 
+    def test_get_orgdir(self):
+        """Media base objects have no orgdir property."""
+
+        with self.assertRaises(NotImplementedError):
+            for media in self.medias:
+                media.orgdir
+
     def test_organize_invalid_path(self):
         """Media with no path or a non-file path cannot be organized."""
 
@@ -327,30 +335,36 @@ class TestMedia(unittest.TestCase):
             mock_mkdir.side_effect = NotADirectoryError()
             self.good_path.organize()
 
-    def test_organize_success(self):
-        """Organize file, set and return new path."""
+    def test_organize_pass_guards(self):
+        """Pass the guard clauses, but fail because Media has no orgdir."""
 
         with mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
-            "pathlib.Path.rename"
-        ) as mock_rename:
+            "shutil.move"
+        ) as mock_move:
             # Mock the existence of the file on disk to avoid creating and removing
             # files on every test.
             mock_is_file.return_value = True
-            # Path.rename moves a file and returns the destination path passed as an
+            # shutil.move moves a file and returns the destination path passed as an
             # argument. Mock it by just returning the input argument.
-            mock_rename.side_effect = lambda x: x
+            mock_move.side_effect = lambda x: x
 
             self.assertIsInstance(self.good_path.path, pathlib.Path)
-            self.assertEqual(
-                self.good_path.organize(),
-                (self.good_path.library / self.good_path.path.name).resolve(),  # type: ignore
-            )
+
+            with self.assertRaises(NotImplementedError):
+                self.good_path.organize()
 
     def test_rename(self):
         """Raise an exception when renaming base Media objects."""
 
-        with self.assertRaises(NotImplementedError):
-            self.good_path.rename()
+        with self.assertRaises(FileNotFoundError):
+            self.no_path.rename()
+
+    def test_str(self) -> None:
+        """String representation should just be a file path."""
+
+        self.assertEqual(
+            str(self.good_path), str(pathlib.Path("fixtures/media.file").resolve())
+        )
 
 
 class TestTV(unittest.TestCase):
@@ -460,6 +474,14 @@ class TestTV(unittest.TestCase):
             self.tv_all_data.section,
             "tv",
             "The section should match the type name, but lowercase",
+        )
+
+    def test_get_orgdir(self):
+        """The orgdir should be the library, series name, then season."""
+
+        self.assertEqual(
+            pathlib.Path("fixtures/tv/Ted Lasso/Season 01/").resolve(),
+            self.tv_all_data.orgdir,
         )
 
     def test_infer_basic(self):
@@ -728,6 +750,27 @@ class TestTV(unittest.TestCase):
         assert self.tv_all_data.path
         self.assertTrue(self.tv_all_data.path.exists())
         self.tv_all_data.path.unlink()
+
+    def test_organize_success(self):
+        """Organize file, set and return new path."""
+
+        with mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
+            "nielsen.media.move"
+        ) as mock_move:
+            # Mock the existence of the file on disk to avoid creating and removing
+            # files on every test.
+            mock_is_file.return_value = True
+            # shutil.move moves a file and returns the destination path passed as an
+            # argument. Mock it by just returning the input argument.
+            mock_move.side_effect = lambda _, org: org
+
+            self.assertIsInstance(self.tv_all_data.path, pathlib.Path)
+            self.assertEqual(
+                self.tv_all_data.organize(),
+                pathlib.Path(
+                    "fixtures/tv/Ted Lasso/Season 01/Ted Lasso -01.03- Trent Crimm: The Independent.mkv"
+                ).resolve(),  # type: ignore
+            )
 
     def test_transform(self):
         """Transform series names based on values from the tv/series/transform config section."""

@@ -24,6 +24,7 @@ import logging
 import pathlib
 import re
 from dataclasses import dataclass, field
+from shutil import move
 from string import capwords
 from typing import Any, Optional, Pattern
 
@@ -134,6 +135,12 @@ class Media:
 
         self._section = value
 
+    @property
+    def orgdir(self) -> pathlib.Path:
+        """Return the orgdir property."""
+
+        raise NotImplementedError
+
     def infer(self) -> None:
         """Infer information about the object's metadata based on its filename. Does
         some basic error checking and then sets the various metadata fields using the
@@ -192,9 +199,12 @@ class Media:
                 )
                 raise
 
-        logger.info("Move %s to %s.", self.path.name, self.library)
-        # TODO: Don't rename files without metadata
-        self.path = self.path.rename(self.library / self.path.name).resolve()
+        # Ensure the orgdir exists and move the file there.
+        logger.info("Move %s → %s.", self.path.name, self.orgdir)
+        self.orgdir.mkdir(exist_ok=True, parents=True)
+        self.path = pathlib.Path(
+            move(self.path, self.orgdir / self.path.name)
+        ).resolve()
         logger.debug("New path: %s", self.path)
 
         return self.path
@@ -214,12 +224,29 @@ class Media:
 
         raise NotImplementedError
 
+    # This implementation may not be especially useful for base Media objects, but it
+    # provides a sensible default implementation other classes are free to use,
+    # extend, or override.
     def rename(self) -> pathlib.Path:
-        """Rename the file associated with this Media object, but do not change its
-        parent directory. Return the new location as a Path object. This makes no sense
-        for the base Media class, but should be implemented by subclasses."""
+        """Rename the file associated with this Media object to match its `str`
+        representation, but do not change its parent directory. Return the new location
+        as a Path object."""
 
-        raise NotImplementedError
+        if not self.path or not self.path.exists():
+            raise FileNotFoundError(self.path)
+
+        dest: pathlib.Path = self.path.with_stem(f"{self!s}")
+        logger.info("Renaming %s → %s", self.path, dest)
+
+        if dest.exists():
+            if self.path.samefile(dest):
+                logger.info("File already named correctly.")
+                return self.path
+            else:
+                raise FileExistsError(dest)
+
+        self.path = self.path.rename(dest)
+        return self.path
 
     def transform(self, field: str) -> str:
         """Transform a field's value based on the corresponding config section. For
@@ -241,9 +268,15 @@ class Media:
             return option
 
         transformed: str = config.get(section, option)
-        logger.info("TRANSFORM: %s to %s", option, transformed)
+        logger.info("TRANSFORM: %s → %s", option, transformed)
 
         return transformed
+
+    def __str__(self) -> str:
+        """Return a friendly, human-readable version of the file path, fit for
+        renaming or display purposes."""
+
+        return f"{self.path.resolve()!s}" if self.path else "No path"
 
 
 @dataclass(order=True, slots=True)
@@ -316,25 +349,11 @@ class TV(Media):
         # Use string.capwords() rather than str.title() to properly handle letters after apostrophes.
         self.title = capwords(re.sub(tags, "", self.title).strip())
 
-    def rename(self) -> pathlib.Path:
-        """Rename the file associated with this Media object, but do not change its
-        parent directory. Return the new location as a Path object."""
+    @property
+    def orgdir(self) -> pathlib.Path:
+        """Return the orgdir property."""
 
-        if not self.path or not self.path.exists():
-            raise FileNotFoundError(self.path)
-
-        dest: pathlib.Path = self.path.with_stem(f"{self!s}")
-        logger.info("Renaming %s → %s", self.path, dest)
-
-        if dest.exists():
-            if self.path.samefile(dest):
-                logger.info("File already named correctly.")
-                return self.path
-            else:
-                raise FileExistsError(dest)
-
-        self.path = self.path.rename(dest)
-        return self.path
+        return pathlib.Path(self.library / f"{self.series}/Season {self.season:02d}/")
 
     def __str__(self) -> str:
         """Return a friendly, human-readable version of the file metadata, fit for
