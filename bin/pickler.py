@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-"""Generate pickled objects for Mocks to return in unit tests."""
+"""Generate pickled objects for Mocks to return in unit tests. This allows us to work
+with real data, but prevents us from having to make additional calls to an external API
+every time the tests are run."""
 
 import logging
 import pathlib
