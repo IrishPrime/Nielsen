@@ -127,17 +127,19 @@ class TestMedia(unittest.TestCase):
         self.config: ConfigParser = nielsen.config.config
         nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
 
-        self.no_path: nielsen.media.Media = nielsen.media.Media()
-        self.non_file_path: nielsen.media.Media = nielsen.media.Media(
-            pathlib.Path("/dev/null")
-        )
         self.good_path: nielsen.media.Media = nielsen.media.Media(
             pathlib.Path("fixtures/media.file")
         )
+        self.missing_file: nielsen.media.Media = nielsen.media.Media(
+            pathlib.Path("fixtures/media/missing.file")
+        )
+        self.non_file_path: nielsen.media.Media = nielsen.media.Media(
+            pathlib.Path("/dev/null")
+        )
         self.medias: list[nielsen.media.Media] = [
-            self.no_path,
-            self.non_file_path,
             self.good_path,
+            self.missing_file,
+            self.non_file_path,
         ]
 
     def tearDown(self):
@@ -148,28 +150,24 @@ class TestMedia(unittest.TestCase):
     def test_init(self):
         """Test construction of new Media objects."""
 
-        self.assertIsNone(self.no_path.path, "No path attribute set by default.")
+        invalid_paths: list[Any] = [None, False, 0, ""]
+        for item in invalid_paths:
+            with self.subTest(
+                "Falsey path values should convert to None", item=item
+            ), self.assertRaises(TypeError):
+                invalid_path: nielsen.media.Media = nielsen.media.Media(item)
+
         self.assertEqual(
-            self.no_path.section, "media", "Section attribute based on type."
+            self.good_path.section, "media", "Section attribute based on type."
         )
         # The library attribute must be a path, but the default value isn't especially
         # important for generic Media objects.
         self.assertIsInstance(
-            self.no_path.library, pathlib.Path, "Library attribute must be a Path."
+            self.good_path.library, pathlib.Path, "Library attribute must be a Path."
         )
         self.assertTrue(
-            self.no_path.library.is_absolute(), "Library should be an absolute path."
+            self.good_path.library.is_absolute(), "Library should be an absolute path."
         )
-
-    def test_infer_no_path(self):
-        """Cannot infer information about an object with no filename."""
-
-        with self.assertLogs("nielsen.media", logging.ERROR) as cm:
-            self.no_path.infer()
-            self.assertTrue(
-                cm.records[0].msg.startswith("NO_PATH"),
-                "Log an error when inferring without a path",
-            )
 
     def test_infer_no_patterns(self):
         """Cannot infer information about an object with no patterns to match."""
@@ -210,23 +208,25 @@ class TestMedia(unittest.TestCase):
     def test_get_section(self):
         """The section property should return a value based on the type."""
 
-        self.assertEqual(
-            self.no_path.section,
-            "media",
-            "The section should match the type name, but lowercase",
-        )
+        for media in self.medias:
+            with self.subTest(media=media):
+                self.assertEqual(
+                    media.section,
+                    "media",
+                    "The section should match the type name, but lowercase",
+                )
 
     def test_set_section(self):
         """Set the section property."""
 
         self.assertEqual(
-            self.no_path.section, "media", "The section should match the type"
+            self.non_file_path.section, "media", "The section should match the type"
         )
         # Set a new section so the change can be verified
         existing_section: str = "unit tests"
-        self.no_path.section = existing_section
+        self.non_file_path.section = existing_section
         self.assertEqual(
-            self.no_path.section,
+            self.non_file_path.section,
             existing_section,
             "The section should match the existing section assigned to it",
         )
@@ -235,9 +235,9 @@ class TestMedia(unittest.TestCase):
         self.assertFalse(
             self.config.has_section(new_section), "New section should not yet exist"
         )
-        self.no_path.section = new_section
+        self.non_file_path.section = new_section
         self.assertEqual(
-            self.no_path.section,
+            self.non_file_path.section,
             new_section,
             "The section should match the newly created section assigned to it",
         )
@@ -246,26 +246,19 @@ class TestMedia(unittest.TestCase):
             "The new section should be added to the config",
         )
 
-    def test_get_library(self):
-        """Get the library property from the appropriate config section."""
+    def test_get_path(self):
+        """Get the path property of the Media object."""
 
-        # Calling resolve on the Path we compare to also ensures the library property is
-        # always an absolute path.
-        self.assertEqual(
-            self.no_path.library,
-            self.config.getpath("media", "library").resolve(),  # type: ignore
-            "Should match option from tv section of config.",
-        )
-        self.assertEqual(
-            self.no_path.library,
-            pathlib.Path("fixtures/media/").resolve(),
-            "Should match known type-specific value.",
-        )
+        for media in self.medias:
+            with self.subTest(media=media):
+                self.assertIsInstance(
+                    media.path, pathlib.Path, "Must be a Path object."
+                )
 
-    def test_set_library(self):
-        """Set the library property."""
+    def test_set_path(self):
+        """Set the path property of a Media object."""
 
-        temp_str: str = "/tmp/nielsen/media/"
+        temp_str: str = "fixtures/media.file"
         temp_path: pathlib.Path = pathlib.Path(temp_str)
 
         for value in [temp_str, temp_path]:
@@ -273,14 +266,55 @@ class TestMedia(unittest.TestCase):
                 "Assigning a string or Path should result in the same Path",
                 item=value,
             ):
-                self.no_path.library = value
-                self.assertEqual(self.no_path.library, temp_path)
-                self.assertIsInstance(self.no_path.library, pathlib.Path)
+                media: nielsen.media.Media = nielsen.media.Media(value)
+                self.assertIsInstance(media.path, pathlib.Path)
+                self.assertTrue(media.path.samefile(temp_path))
+                self.assertTrue(media.path.is_file())
 
         with self.assertRaises(
-            TypeError, msg="Cannot set library to non-Path-like object."
+            TypeError, msg="Cannot set path to non-PathLike object."
         ):
-            self.no_path.library = None  # type: ignore
+            media.path = None  # type: ignore
+
+    def test_get_library(self):
+        """Get the library property from the appropriate config section."""
+
+        # Calling resolve on the Path we compare to also ensures the library property is
+        # always an absolute path.
+        self.assertEqual(
+            self.good_path.library,
+            self.config.getpath("media", "library").resolve(),  # type: ignore
+            "Should match option from tv section of config.",
+        )
+        self.assertEqual(
+            self.good_path.library,
+            pathlib.Path("fixtures/media/").resolve(),
+            "Should match known type-specific value.",
+        )
+
+    def test_set_library(self):
+        """Set the library property."""
+
+        temp_str: str = "fixtures/media/"
+        temp_path: pathlib.Path = pathlib.Path(temp_str)
+
+        for value in [temp_str, temp_path]:
+            with self.subTest(
+                "Assigning a string or Path should result in the same Path",
+                item=value,
+            ):
+                self.non_file_path.library = value
+                self.assertIsInstance(self.non_file_path.library, pathlib.Path)
+                self.assertTrue(self.non_file_path.library.samefile(temp_path))
+                self.assertTrue(self.non_file_path.library.is_dir())
+
+        invalid_paths: list[Any] = [None, False, 0, "/dev/null"]
+        for item in invalid_paths:
+            with self.subTest(
+                "The library must be a PathLike object representing a directory.",
+                item=item,
+            ), self.assertRaises(TypeError):
+                self.non_file_path.library = item
 
     def test_get_patterns(self):
         """Media base objects have no patterns."""
@@ -301,9 +335,8 @@ class TestMedia(unittest.TestCase):
     def test_organize_invalid_path(self):
         """Media with no path or a non-file path cannot be organized."""
 
-        for media in [self.no_path, self.non_file_path]:
-            with self.subTest(item=media), self.assertRaises(TypeError):
-                media.organize()
+        with self.assertRaises(TypeError):
+            self.non_file_path.organize()
 
     def test_organize_library_permission_error(self):
         """Library directory does not exist and cannot be created."""
@@ -357,7 +390,7 @@ class TestMedia(unittest.TestCase):
         """Raise an exception when renaming base Media objects."""
 
         with self.assertRaises(FileNotFoundError):
-            self.no_path.rename()
+            self.missing_file.rename()
 
     def test_str(self) -> None:
         """String representation should just be a file path."""
@@ -375,6 +408,7 @@ class TestTV(unittest.TestCase):
 
         self.config: ConfigParser = nielsen.config.config
         nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
+        self.missing_file: pathlib.Path = pathlib.Path("fixtures/media/missing.file")
 
         self.tv_good_filename: nielsen.media.Media = nielsen.media.TV(
             pathlib.Path("Ted Lasso -01.03- Trent Crimm: The Independent.mkv")
@@ -386,8 +420,8 @@ class TestTV(unittest.TestCase):
             episode=3,
             title="Trent Crimm: The Independent",
         )
-        self.tv_good_metadata_no_path: nielsen.media.Media = nielsen.media.TV(
-            None,
+        self.tv_good_metadata_missing_file: nielsen.media.Media = nielsen.media.TV(
+            self.missing_file,
             series="Ted Lasso",
             season=1,
             episode=3,
@@ -404,7 +438,7 @@ class TestTV(unittest.TestCase):
         self.tvs: list[nielsen.media.Media] = [
             self.tv_good_filename,
             self.tv_good_metadata,
-            self.tv_good_metadata_no_path,
+            self.tv_good_metadata_missing_file,
             self.tv_all_data,
         ]
 
@@ -415,12 +449,6 @@ class TestTV(unittest.TestCase):
 
     def test_init(self):
         """Type conversion from the base class should happen in the subclass, as well."""
-
-        falsey: list[Any] = [None, False, 0, ""]
-        for item in falsey:
-            with self.subTest("Falsey path values should convert to None", item=item):
-                tv_none_path: nielsen.media.TV = nielsen.media.TV(item)
-                self.assertIsNone(tv_none_path.path)
 
         valid_paths: list[nielsen.media.Media] = [
             self.tv_good_filename,
@@ -661,7 +689,10 @@ class TestTV(unittest.TestCase):
 
         for filename, metadata in media.items():
             tv: nielsen.media.TV = nielsen.media.TV(pathlib.Path(filename))
-            with self.subTest("Inferred metadata mismatch", tv=tv, metadata=metadata):
+            with self.subTest(
+                "Inferred metadata mismatch", tv=tv, metadata=metadata
+            ), mock.patch("pathlib.Path.exists") as mock_exists:
+                mock_exists.return_value = True
                 tv.infer()
                 self.assertDictEqual(tv.metadata, metadata)
 
@@ -669,26 +700,26 @@ class TestTV(unittest.TestCase):
         """Items should be sorted by season, then episode number."""
 
         self.assertLess(
-            nielsen.media.TV(None, season=1, episode=1),
-            nielsen.media.TV(None, season=1, episode=2),
+            nielsen.media.TV(self.missing_file, season=1, episode=1),
+            nielsen.media.TV(self.missing_file, season=1, episode=2),
             "Same season, different episode numbers",
         )
 
         self.assertLess(
-            nielsen.media.TV(None, season=1, episode=1),
-            nielsen.media.TV(None, season=2, episode=1),
+            nielsen.media.TV(self.missing_file, season=1, episode=1),
+            nielsen.media.TV(self.missing_file, season=2, episode=1),
             "Different seasons, same episode number",
         )
 
         self.assertLess(
-            nielsen.media.TV(None, season=1, episode=10),
-            nielsen.media.TV(None, season=2, episode=2),
+            nielsen.media.TV(self.missing_file, season=1, episode=10),
+            nielsen.media.TV(self.missing_file, season=2, episode=2),
             "Different seasons and episode numbers",
         )
 
         self.assertEqual(
-            nielsen.media.TV(None, season=1, episode=2),
-            nielsen.media.TV(None, season=1, episode=2),
+            nielsen.media.TV(self.missing_file, season=1, episode=2),
+            nielsen.media.TV(self.missing_file, season=1, episode=2),
             "Same season and episode number",
         )
 
@@ -696,7 +727,7 @@ class TestTV(unittest.TestCase):
         """Rename a TV object with no path or an invalid path."""
 
         tvs: list[nielsen.media.Media] = [
-            self.tv_good_metadata_no_path,
+            self.tv_good_metadata_missing_file,
             self.tv_good_metadata,
         ]
 
@@ -705,7 +736,7 @@ class TestTV(unittest.TestCase):
                 with self.assertRaises(
                     FileNotFoundError, msg="Missing files cannot be renamed."
                 ):
-                    self.tv_good_metadata_no_path.rename()
+                    self.tv_good_metadata_missing_file.rename()
 
     @mock.patch("pathlib.Path.samefile")
     @mock.patch("pathlib.Path.exists")
@@ -741,9 +772,8 @@ class TestTV(unittest.TestCase):
         self.tv_good_metadata.path.touch(exist_ok=False)
 
         # Rename the base file
-        self.assertEqual(
-            self.tv_good_metadata.rename(),
-            dest,
+        self.assertTrue(
+            dest.samefile(self.tv_good_metadata.rename()),
             "Paths should match.",
         )
 
@@ -794,7 +824,7 @@ class TestTV(unittest.TestCase):
             with self.subTest(variant=variant):
                 self.config.set("tv/transform/series", variant, "Agents of SHIELD")
                 shield: nielsen.media.Media = nielsen.media.TV(
-                    None, series=variant, season=1, episode=1
+                    self.missing_file, series=variant, season=1, episode=1
                 )
                 self.assertEqual(
                     "Agents of SHIELD",
@@ -823,8 +853,16 @@ class TestTV(unittest.TestCase):
     def test_repr(self):
         """Object representation should contain enough information to recreate an object."""
 
-        expected: str = "<TV(self.path=None, self.series='Ted Lasso', self.season=1, self.episode=3, self.title='Trent Crimm: The Independent')>"
-        self.assertEqual(expected, repr(self.tv_good_metadata_no_path))
+        path: pathlib.Path = pathlib.Path(
+            "Ted Lasso -01.03- Trent Crimm: The Independent.mkv"
+        ).resolve()
+        series: str = "Ted Lasso"
+        season: int = 1
+        episode: int = 3
+        title: str = "Trent Crimm: The Independent"
+        expected: str = f"<TV(self.{path=}, self.{series=}, self.{season=}, self.{episode=}, self.{title=})>"
+
+        self.assertEqual(expected, repr(self.tv_all_data))
 
     def test_str(self):
         """The string representation should provide a useful display name."""
@@ -843,7 +881,7 @@ class TestTV(unittest.TestCase):
         )
         self.assertEqual(
             string,
-            str(self.tv_good_metadata_no_path),
+            str(self.tv_good_metadata_missing_file),
             "TV object with all metadata",
         )
         self.assertEqual(
@@ -861,12 +899,17 @@ class TestTVMaze(unittest.TestCase):
 
         self.config: ConfigParser = nielsen.config.config
         nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
+        self.missing_path: pathlib.Path = pathlib.Path("fixtures/media/missing.file")
 
         self.fetcher: nielsen.fetcher.TVMaze = nielsen.fetcher.TVMaze()
-        self.ted_lasso: nielsen.media.TV = nielsen.media.TV(series="Ted Lasso")
+        self.ted_lasso: nielsen.media.TV = nielsen.media.TV(
+            self.missing_path,
+            series="Ted Lasso",
+        )
         self.ted_lasso_id: int = 44458
         self.agents_of_shield: nielsen.media.TV = nielsen.media.TV(
-            series="Agents of SHIELD"
+            pathlib.Path("fixtures/media/missing.file"),
+            series="Agents of SHIELD",
         )
         self.agents_of_shield_id: int = 31
 
@@ -954,7 +997,9 @@ class TestTVMaze(unittest.TestCase):
             },
             {
                 "id": 0,
-                "media": nielsen.media.TV(series="Useless Search String"),
+                "media": nielsen.media.TV(
+                    self.missing_path, series="Useless Search String"
+                ),
                 "pickle": "fixtures/tv/search/shows-q-useless+search+string.pickle",
             },
         ]
@@ -1008,7 +1053,7 @@ class TestTVMaze(unittest.TestCase):
 
         mock_series_id.return_value = None
 
-        empty: nielsen.media.TV = nielsen.media.TV(None)
+        empty: nielsen.media.TV = nielsen.media.TV(self.missing_path)
         with self.assertRaises(ValueError):
             self.fetcher.get_episode_title(empty)
 
