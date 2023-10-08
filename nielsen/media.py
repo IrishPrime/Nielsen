@@ -26,7 +26,7 @@ import re
 from dataclasses import dataclass, field
 from shutil import move
 from string import capwords
-from typing import Any, Optional, Pattern
+from typing import Any, Pattern
 
 from nielsen.config import config
 
@@ -38,7 +38,6 @@ logger.addHandler(logging.NullHandler())
 class Media:
     """Media objects represent a file to be managed and its metadata."""
 
-    path: Optional[pathlib.Path] = None
     patterns: list[Pattern] = field(
         default_factory=list,
         init=False,
@@ -46,6 +45,9 @@ class Media:
         hash=False,
         compare=False,
         metadata=None,
+    )
+    _path: pathlib.Path = field(
+        hash=True,
     )
     _section: str = field(
         init=False,
@@ -73,10 +75,8 @@ class Media:
     def __post_init__(self):
         """Modify instance after initialization."""
 
-        if isinstance(self.path, pathlib.Path):
-            self.path = self.path.resolve()
-        else:
-            self.path = None
+        # Set the path again to run it through the property setter
+        self.path = self.path
 
         # By default, instances of a subclass should use the section of the config
         # corresponding to their type name.
@@ -90,6 +90,28 @@ class Media:
         self.load_patterns()
 
     @property
+    def path(self) -> pathlib.Path:
+        """Return a Path object representing the Media file on disk."""
+
+        return self._path
+
+    @path.setter
+    def path(self, value: pathlib.Path | str) -> None:
+        """Set the path property. Attempt to coerce the value to a Path if not
+        provided as such."""
+
+        if not isinstance(value, pathlib.Path):
+            try:
+                value = pathlib.Path(value)
+                if not value.is_file():
+                    raise TypeError(repr(value))
+            except TypeError:
+                logger.exception("Media.path must be a file: %s", repr(value))
+                raise
+
+        self._path = value.resolve()
+
+    @property
     def library(self) -> pathlib.Path:
         """Return a Path object representing the root of the library for the Media type
         from the config."""
@@ -97,15 +119,17 @@ class Media:
         return self._library
 
     @library.setter
-    def library(self, value: pathlib.Path) -> None:
+    def library(self, value: pathlib.Path | str) -> None:
         """Set the library property. Attempt to coerce the value to a Path if not
         provided as such."""
 
         if not isinstance(value, pathlib.Path):
             try:
                 value = pathlib.Path(value)
+                if not value.is_dir():
+                    raise TypeError(repr(value))
             except TypeError:
-                logger.exception("Could not coerce value to Path: %s", repr(value))
+                logger.exception("Media.library must be a directory: %s", repr(value))
                 raise
 
         self._library = value.resolve()
@@ -147,11 +171,6 @@ class Media:
         `metadata.setter` method which each subclass must implement to handle value
         transformations and/or formatting."""
 
-        if not self.path:
-            logger.error("NO_PATH: No path from which to infer.")
-            logger.debug(repr(self))
-            return
-
         if not self.patterns:
             logger.error("NO_PATTERNS: No patterns defined to match against.")
             logger.debug(repr(self))
@@ -178,10 +197,6 @@ class Media:
 
     def organize(self) -> pathlib.Path:
         """Move the file to the appropriate media library on disk."""
-
-        if not isinstance(self.path, pathlib.Path):
-            logger.error("Path attribute is not of type Path: %s", self.path)
-            raise TypeError(self.path)
 
         if not self.path.is_file():
             logger.error(
@@ -276,7 +291,7 @@ class Media:
         """Return a friendly, human-readable version of the file path, fit for
         renaming or display purposes."""
 
-        return f"{self.path.resolve()!s}" if self.path else "No path"
+        return f"{self.path.resolve()!s}"
 
 
 @dataclass(order=True, slots=True)
