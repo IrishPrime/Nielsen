@@ -13,11 +13,13 @@ CONFIG_FILE_LOCATIONS: list[str | pathlib.Path] = [
     pathlib.Path("~/.config/nielsen/config.ini").expanduser(),
 ]
 
+# Add a getpath converter.
 config: ConfigParser = ConfigParser(converters={"path": pathlib.Path})
+
 # Set default options
-config["DEFAULT"] = {
+config[config.default_section] = {
     # Dry Run - Outputs results without actually modifying files
-    "dryrun": "False",
+    "simulate": "False",
     # Fetch - Whether to query remote sources for information
     "fetch": "True",
     # Transform - Whether to refer to the <type>/<field>/transform section when organizing Media

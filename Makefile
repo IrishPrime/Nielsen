@@ -1,7 +1,7 @@
 test:
-	-coverage run --omit nielsen/logging.py -m unittest discover
-	-coverage html --omit nielsen/logging.py --skip-empty nielsen/*.py
-	-coverage report --omit nielsen/logging.py --skip-empty nielsen/*.py
+	-coverage run -m pytest test.py
+	-coverage html --skip-empty nielsen/*.py
+	-coverage report --skip-empty nielsen/*.py
 
 # Run the pickler script, which makes actual calls to remote APIs and pickles
 # the responses so further tests can be run against the saved responses rather
@@ -9,5 +9,11 @@ test:
 pickle:
 	./bin/pickler.py
 
+# Install and source the completion script for zsh
+zsh:
+	nielsen --install-completion zsh
+	$(shell source ~/.zfunc/_nielsen)
+
 .PHONY: test
 .PHONY: pickle
+.PHONY: zsh
