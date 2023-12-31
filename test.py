@@ -8,6 +8,7 @@ import pickle
 import re
 import unittest
 import unittest.util
+import typing_extensions
 from configparser import ConfigParser
 from unittest import mock
 from typing import Any, Pattern
@@ -17,6 +18,7 @@ import requests
 import nielsen.config
 import nielsen.fetcher
 import nielsen.media
+import nielsen.processor
 
 unittest.util._MAX_LENGTH = 2048
 
@@ -55,7 +57,7 @@ class TestConfig(unittest.TestCase):
         )
 
         defaults: dict[str, str] = {
-            "dryrun": "False",
+            "simulate": "False",
             "fetch": "True",
             "transform": "True",
             "interactive": "True",
@@ -260,6 +262,7 @@ class TestMedia(unittest.TestCase):
 
         temp_str: str = "fixtures/media.file"
         temp_path: pathlib.Path = pathlib.Path(temp_str)
+        temp_path.touch(mode=644, exist_ok=True)
 
         for value in [temp_str, temp_path]:
             with self.subTest(
@@ -892,7 +895,7 @@ class TestTV(unittest.TestCase):
 
 
 class TestTVMaze(unittest.TestCase):
-    """Tests for the TVMaze."""
+    """Tests for the TVMaze Fetcher."""
 
     def setUp(self):
         """Prepare reference objects for tests."""
@@ -1100,6 +1103,90 @@ class TestTVMaze(unittest.TestCase):
             "Trent Crimm: The Independent",
             "Title should be correctly set after fetching.",
         )
+
+
+class TestProcessor(unittest.TestCase):
+    """Tests for the nielsen.processor module."""
+
+    def setUp(self):
+        """Prepare reference objects for tests."""
+
+        self.config: ConfigParser = nielsen.config.config
+        nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
+
+    def test_processor_init(self):
+        """Test construction of new Processor objects."""
+
+        processor: nielsen.processor.Processor = nielsen.processor.Processor(
+            nielsen.media.Media, nielsen.fetcher.TVMaze()
+        )
+
+        assert hasattr(processor, "media_type")
+        assert hasattr(processor, "fetcher")
+        assert issubclass(processor.media_type, nielsen.media.Media)
+        assert isinstance(processor.fetcher, nielsen.fetcher.TVMaze)
+
+    def test_processor_factory_init(self):
+        """Test construction of new ProcessorFactory objects."""
+
+        factory: nielsen.processor.ProcessorFactory = (
+            nielsen.processor.ProcessorFactory(
+                nielsen.media.Media, nielsen.fetcher.TVMaze
+            )
+        )
+
+        assert hasattr(factory, "media_type")
+        assert hasattr(factory, "fetcher")
+        assert issubclass(factory.media_type, nielsen.media.Media)
+        # factory.fetcher must be a subclass of Fetcher, but not an instance of it
+        assert issubclass(factory.fetcher, nielsen.fetcher.TVMaze)
+        assert not isinstance(factory.fetcher, nielsen.fetcher.TVMaze)
+
+    def test_processor_factory_call(self):
+        """Calling the Factory should return a Processor."""
+
+        factory: nielsen.processor.ProcessorFactory = (
+            nielsen.processor.ProcessorFactory(nielsen.media.TV, nielsen.fetcher.TVMaze)
+        )
+
+        processor: nielsen.processor.Processor = factory()
+        assert isinstance(processor, nielsen.processor.Processor)
+
+    def test_processor_process(self):
+        """The process method should call all other high-level Media/Fetcher functions."""
+
+        # This test should be expanded as more Media and Fetcher types are added
+        mock_fetcher: mock.Mock = mock.Mock(spec_set=nielsen.fetcher.TVMaze)
+        processor: nielsen.processor.Processor = nielsen.processor.Processor(
+            nielsen.media.TV, mock_fetcher
+        )
+
+        with mock.patch("nielsen.media.Media.rename") as mock_rename, mock.patch(
+            "nielsen.media.Media.organize"
+        ) as mock_organize:
+            media_path: pathlib.Path = pathlib.Path(
+                "ted.lasso.s01e01.1080p.web.h264-ggwp"
+            )
+            # Disable side effects
+            mock_fetcher.fetch.side_effect = None
+            mock_rename.side_effect = None
+            mock_organize.side_effect = None
+
+            # Assert all options are enabled
+            assert self.config.getboolean("tv", "fetch")
+            assert self.config.getboolean("tv", "rename")
+            assert self.config.getboolean("tv", "organize")
+
+            # Process media
+            processed: nielsen.media.Media = processor.process(media_path)
+
+            # Assert functions are called
+            mock_fetcher.fetch.assert_called_once()
+            mock_rename.assert_called_once()
+            mock_organize.assert_called_once()
+
+            # Assert returned type of processed Media matches
+            assert isinstance(processed, nielsen.media.TV)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 from typing import Any
 from typing import Optional
 from typing import Protocol
+from typing import TypeVar
 import logging
 import urllib.parse
 
@@ -15,12 +16,14 @@ from nielsen.config import config
 logger: logging.Logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+MediaType = TypeVar("MediaType", bound=nielsen.media.Media)
+
 
 class Fetcher(Protocol):
     """Used to fetch metadata from an external source rather than infering it from the
     file name."""
 
-    def fetch(self, media: nielsen.media.Media) -> None:
+    def fetch(self, media: MediaType) -> None:
         """Fetch and update metadata using information from the given `Media` object."""
         ...
 
