@@ -196,7 +196,8 @@ class Media:
         return {}
 
     def organize(self) -> pathlib.Path:
-        """Move the file to the appropriate media library on disk."""
+        """Move the file to the appropriate media library on disk, set file ownership
+        and mode."""
 
         if not self.path.is_file():
             logger.error(
@@ -215,12 +216,13 @@ class Media:
                 raise
 
         # Ensure the orgdir exists and move the file there.
-        logger.info("Move %s → %s.", self.path.name, self.orgdir)
-        self.orgdir.mkdir(exist_ok=True, parents=True)
-        self.path = pathlib.Path(
-            move(self.path, self.orgdir / self.path.name)
-        ).resolve()
-        logger.debug("New path: %s", self.path)
+        logger.info("Move %s → %s/.", self.path.name, self.orgdir)
+        if not config.getboolean("nielsen", "simulate"):
+            self.orgdir.mkdir(exist_ok=True, parents=True)
+            self.path = pathlib.Path(
+                move(self.path, self.orgdir / self.path.name)
+            ).resolve()
+            logger.debug("New path: %s", self.path)
 
         return self.path
 
@@ -260,7 +262,9 @@ class Media:
             else:
                 raise FileExistsError(dest)
 
-        self.path = self.path.rename(dest)
+        if not config.getboolean("nielsen", "simulate"):
+            self.path = self.path.rename(dest)
+
         return self.path
 
     def transform(self, field: str) -> str:

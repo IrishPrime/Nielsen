@@ -16,14 +16,15 @@ from nielsen.config import config
 logger: logging.Logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-MediaType = TypeVar("MediaType", bound=nielsen.media.Media)
+# Define a generic Media type so the Fetcher Protocol will recognize Media subclasses
+MT = TypeVar("MT", bound=nielsen.media.Media)
 
 
 class Fetcher(Protocol):
     """Used to fetch metadata from an external source rather than infering it from the
     file name."""
 
-    def fetch(self, media: MediaType) -> None:
+    def fetch(self, media: MT) -> None:
         """Fetch and update metadata using information from the given `Media` object."""
         ...
 
