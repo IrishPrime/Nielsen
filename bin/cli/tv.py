@@ -3,10 +3,11 @@
 
 import logging
 from pathlib import Path
+from typing_extensions import Annotated
 
 import nielsen.config
 import nielsen.media
-from nielsen.config import config as cfg
+from nielsen.config import config as config
 
 import typer
 from rich.pretty import pprint
@@ -30,9 +31,10 @@ def rename(
         resolve_path=True,
         help="File(s) to rename",
     ),
-    simulate: bool = typer.Option(
-        False, help="Show file renames without performing them"
-    ),
+    simulate: Annotated[
+        bool,
+        typer.Option(help="Show file operations without performing them"),
+    ] = config.getboolean("nielsen", "simulate"),
 ) -> None:
     """Rename the given files."""
 

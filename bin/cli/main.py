@@ -51,7 +51,7 @@ def process(
     simulate: Annotated[
         bool,
         typer.Option(help="Show file operations without performing them"),
-    ] = True,
+    ] = config.getboolean("nielsen", "simulate"),
     media_type: Annotated[
         nielsen.processor.MediaType,
         typer.Option(help="Media Type used to process files"),
@@ -78,7 +78,7 @@ def process(
     config.set(media_type.value, "fetch", str(fetch))
     config.set(media_type.value, "organize", str(organize))
     config.set(media_type.value, "rename", str(rename))
-    config.set(media_type.value, "simulate", str(simulate))
+    config.set("nielsen", "simulate", str(simulate))
 
     for file in files:
         processor.process(Path(file))

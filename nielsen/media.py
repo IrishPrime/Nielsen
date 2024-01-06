@@ -252,17 +252,19 @@ class Media:
         if not self.path or not self.path.exists():
             raise FileNotFoundError(self.path)
 
+        simulate: bool = config.getboolean("nielsen", "simulate")
         dest: pathlib.Path = self.path.with_stem(f"{self!s}")
-        logger.info("Renaming %s → %s", self.path, dest)
+        logger.info("Renaming %s → %s. Simulate: %s", self.path, dest, simulate)
 
         if dest.exists():
             if self.path.samefile(dest):
                 logger.info("File already named correctly.")
-                return self.path
             else:
-                raise FileExistsError(dest)
+                logger.warning("FILE_CONFLICT: %s already exists.", dest)
 
-        if not config.getboolean("nielsen", "simulate"):
+            return self.path
+
+        if not simulate:
             self.path = self.path.rename(dest)
 
         return self.path

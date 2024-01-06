@@ -748,10 +748,9 @@ class TestTV(unittest.TestCase):
 
         mock_exists.return_value = True
         mock_same.return_value = False
-        with self.assertRaises(
-            FileExistsError, msg="Existing files should not be overwritten."
-        ):
+        with self.assertLogs("nielsen", logging.INFO) as cm:
             self.tv_good_metadata.rename()
+            self.assertIn("FILE_CONFLICT", cm.records[1].getMessage())
 
         mock_same.return_value = True
         with self.assertLogs("nielsen", logging.INFO) as cm:
