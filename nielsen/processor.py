@@ -16,7 +16,7 @@ import nielsen.fetcher
 import nielsen.media
 
 
-class MediaType(Enum):
+class MediaType(str, Enum):
     TV = "tv"
 
 

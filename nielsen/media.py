@@ -196,7 +196,8 @@ class Media:
         return {}
 
     def organize(self) -> pathlib.Path:
-        """Move the file to the appropriate media library on disk."""
+        """Move the file to the appropriate media library on disk, set file ownership
+        and mode."""
 
         if not self.path.is_file():
             logger.error(
@@ -215,12 +216,13 @@ class Media:
                 raise
 
         # Ensure the orgdir exists and move the file there.
-        logger.info("Move %s → %s.", self.path.name, self.orgdir)
-        self.orgdir.mkdir(exist_ok=True, parents=True)
-        self.path = pathlib.Path(
-            move(self.path, self.orgdir / self.path.name)
-        ).resolve()
-        logger.debug("New path: %s", self.path)
+        logger.info("Move %s → %s/.", self.path.name, self.orgdir)
+        if not config.getboolean("nielsen", "simulate"):
+            self.orgdir.mkdir(exist_ok=True, parents=True)
+            self.path = pathlib.Path(
+                move(self.path, self.orgdir / self.path.name)
+            ).resolve()
+            logger.debug("New path: %s", self.path)
 
         return self.path
 
@@ -250,17 +252,21 @@ class Media:
         if not self.path or not self.path.exists():
             raise FileNotFoundError(self.path)
 
+        simulate: bool = config.getboolean("nielsen", "simulate")
         dest: pathlib.Path = self.path.with_stem(f"{self!s}")
-        logger.info("Renaming %s → %s", self.path, dest)
+        logger.info("Renaming %s → %s. Simulate: %s", self.path, dest, simulate)
 
         if dest.exists():
             if self.path.samefile(dest):
                 logger.info("File already named correctly.")
-                return self.path
             else:
-                raise FileExistsError(dest)
+                logger.warning("FILE_CONFLICT: %s already exists.", dest)
 
-        self.path = self.path.rename(dest)
+            return self.path
+
+        if not simulate:
+            self.path = self.path.rename(dest)
+
         return self.path
 
     def transform(self, field: str) -> str:
