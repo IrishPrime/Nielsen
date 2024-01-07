@@ -6,6 +6,7 @@ from pathlib import Path
 from typing_extensions import Annotated
 
 import nielsen.config
+import nielsen.fetcher
 import nielsen.media
 from nielsen.config import config as config
 
@@ -20,29 +21,17 @@ app: typer.Typer = typer.Typer(name="TV")
 
 
 @app.command()
-def rename(
-    files: list[Path] = typer.Argument(
-        ...,
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        writable=True,
-        readable=True,
-        resolve_path=True,
-        help="File(s) to rename",
-    ),
-    simulate: Annotated[
-        bool,
-        typer.Option(help="Show file operations without performing them"),
-    ] = config.getboolean("nielsen", "simulate"),
+def series(
+    interactive: Annotated[bool, typer.Option()],
+    series: Annotated[list[str], typer.Argument(help="Show title to search for")],
 ) -> None:
-    """Rename the given files."""
+    """Search for a TV series by title."""
 
-    for file in files:
-        media: nielsen.media.TV = nielsen.media.TV(file)
-        if simulate:
-            media.infer()
-            pprint(f"{media.path} → {media!r}")
+    flattened: str = " ".join(series)
+    media: nielsen.media.TV = nielsen.media.TV(Path("/dev/null"), series=flattened)
+    fetcher: nielsen.fetcher.TVMaze = nielsen.fetcher.TVMaze()
+
+    fetcher.get_series_id_search(media)
 
 
 if __name__ == "__main__":

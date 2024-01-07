@@ -29,9 +29,46 @@ logging.basicConfig(
 app: typer.Typer = typer.Typer()
 
 app.add_typer(
-    bin.cli.config.app, name="config", help="Interact with the Nielsen configuration"
+    bin.cli.config.app, name="config", help="Subcommands for the Nielsen configuration"
 )
-app.add_typer(bin.cli.tv.app, name="tv", help="Manage episodes of TV shows")
+app.add_typer(
+    bin.cli.tv.app, name="tv", help="Subcommands for interacting with TV shows"
+)
+
+
+@app.command()
+def infer(
+    files: Annotated[list[str], typer.Argument(help="File(s) to process")],
+    fetch: Annotated[
+        bool,
+        typer.Option(help="Fetch metadata from remote sources for file(s)"),
+    ] = config.getboolean("nielsen", "fetch"),
+    media_type: Annotated[
+        nielsen.processor.MediaType,
+        typer.Option(help="Media Type used to process files"),
+    ] = nielsen.processor.MediaType.TV,
+) -> None:
+    """Infer metadata about the given file and print it. Does not modify the file."""
+
+    config.set("nielsen", "fetch", str(fetch))
+
+    processor_factory: nielsen.processor.ProcessorFactory | None = (
+        nielsen.processor.PROCESSOR_FACTORIES.get(media_type)
+    )
+
+    if processor_factory is None:
+        logger.critical(
+            "Media Processor could not be created for type: %s.", media_type
+        )
+        raise typer.Exit(code=1)
+
+    processor: nielsen.processor.Processor = processor_factory()
+
+    for file in files:
+        media: nielsen.media.Media = processor.media_type(Path(file))
+        media.infer()
+        processor.fetcher.fetch(media)
+        print(media)
 
 
 @app.command()
@@ -40,7 +77,7 @@ def process(
     fetch: Annotated[
         bool,
         typer.Option(help="Fetch metadata from remote sources for file(s)"),
-    ] = config.getboolean("nielsen", "organize"),
+    ] = config.getboolean("nielsen", "fetch"),
     organize: Annotated[
         bool,
         typer.Option(help="Move file(s) to library, but do not otherwise rename them"),

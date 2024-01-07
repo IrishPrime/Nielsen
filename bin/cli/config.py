@@ -4,7 +4,7 @@
 import logging
 
 import nielsen.config
-from nielsen.config import config as cfg
+from nielsen.config import config as config
 
 import typer
 from rich.pretty import pprint
@@ -20,12 +20,12 @@ def dump() -> None:
     """Dump the current configuration."""
 
     typer.echo("Configuration")
-    typer.echo(cfg.default_section)
-    pprint(cfg.defaults(), expand_all=True)
+    typer.echo(config.default_section)
+    pprint(config.defaults(), expand_all=True)
 
-    for section in cfg.sections():
+    for section in config.sections():
         typer.echo(section)
-        pprint(cfg.items(section))
+        pprint(config.items(section))
 
 
 if __name__ == "__main__":
