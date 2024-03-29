@@ -11,8 +11,8 @@ import nielsen.fetcher
 import nielsen.media
 import nielsen.processor
 
-import bin.cli.config
-import bin.cli.tv
+import nielsen.bin.cli.config
+import nielsen.bin.cli.tv
 
 import typer
 
@@ -29,10 +29,12 @@ logging.basicConfig(
 app: typer.Typer = typer.Typer()
 
 app.add_typer(
-    bin.cli.config.app, name="config", help="Subcommands for the Nielsen configuration"
+    nielsen.bin.cli.config.app,
+    name="config",
+    help="Subcommands for the Nielsen configuration",
 )
 app.add_typer(
-    bin.cli.tv.app, name="tv", help="Subcommands for interacting with TV shows"
+    nielsen.bin.cli.tv.app, name="tv", help="Subcommands for interacting with TV shows"
 )
 
 

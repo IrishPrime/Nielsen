@@ -64,7 +64,7 @@ class TestConfig(unittest.TestCase):
             "library": str(pathlib.Path.home()),
             "logfile": "~/.local/log/nielsen/nielsen.log",
             "loglevel": "WARNING",
-            "mode": "664",
+            "mode": "644",
             "organize": "True",
             "rename": "True",
         }
