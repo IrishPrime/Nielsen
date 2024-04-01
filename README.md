@@ -37,15 +37,15 @@ poetry install
 
 ## Concepts
 
-- [Media](#Media) - Represents a file on disk and its metadata.
-- [MediaType](#Media-Type) - The specific type of `Media` (e.g. TV show, movie,
-  music, anime), which determines how metadata is inferred and which `Fetcher`
-  to use.
-- [Fetcher](#Fetcher) - Queries external systems/services for metadata about a
-  given `Media`.
-- [Processor](#Processor) - A grouping of a `MediaType` and `Fetcher`. Given a
-  file, the `Processor` creates the appropriate `Media` (based on the
-  `MediaType`) and `Fetcher` to query for metadata.
+- [`Media`](./ARCHITECTURE.md#nielsen.media.Media) - Represents a file on disk
+  and its metadata. The specific subclass determines how metadata is inferred
+  and which `Fetcher` should be used.
+- [`Fetcher`](./ARCHITECTURE.md#nielsen.fetcher.Fetcher) - Queries external
+  systems/services for metadata about a given `Media` instance.
+- [`Processor`](./ARCHITECTURE.md#nielsen.processor.Processor) - A grouping of
+  a `MediaType` and `Fetcher`. Given a file, the `Processor` creates the
+  appropriate `Media` (based on the `MediaType`) and `Fetcher` to query for
+  metadata.
 
 Under the hood, "processing" a file will create a `Media` object from the given
 path and `MediaType`, infer metadata based on the filename (e.g. TV series
