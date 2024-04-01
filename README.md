@@ -37,12 +37,12 @@ poetry install
 
 ## Concepts
 
-- [`Media`](./ARCHITECTURE.md#nielsen.media.Media) - Represents a file on disk
+- [`Media`](./ARCHITECTURE.md#nielsenmediamedia) - Represents a file on disk
   and its metadata. The specific subclass determines how metadata is inferred
   and which `Fetcher` should be used.
-- [`Fetcher`](./ARCHITECTURE.md#nielsen.fetcher.Fetcher) - Queries external
+- [`Fetcher`](./ARCHITECTURE.md#nielsenfetcherfetcher) - Queries external
   systems/services for metadata about a given `Media` instance.
-- [`Processor`](./ARCHITECTURE.md#nielsen.processor.Processor) - A grouping of
+- [`Processor`](./ARCHITECTURE.md#nielsenprocessorprocessor) - A grouping of
   a `MediaType` and `Fetcher`. Given a file, the `Processor` creates the
   appropriate `Media` (based on the `MediaType`) and `Fetcher` to query for
   metadata.
