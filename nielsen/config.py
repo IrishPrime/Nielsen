@@ -33,7 +33,7 @@ config[config.default_section] = {
     # LogLevel - The minimum log-level to display
     "loglevel": "WARNING",
     # Mode - The file mode (permissions) to set on Media files during processing
-    "mode": "664",
+    "mode": "644",
     # Organize - Whether to move Media to its library directory
     "organize": "True",
     # Rename - Whether to rename individual Media files
