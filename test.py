@@ -788,10 +788,13 @@ class TestTV(unittest.TestCase):
 
         with mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
             "nielsen.media.move"
-        ) as mock_move:
+        ) as mock_move, mock.patch("pathlib.Path.chmod") as mock_chmod, mock.patch(
+            "nielsen.media.chown"
+        ) as mock_chown:
             # Mock the existence of the file on disk to avoid creating and removing
             # files on every test.
             mock_is_file.return_value = True
+
             # shutil.move moves a file and returns the destination path passed as an
             # argument. Mock it by just returning the input argument.
             mock_move.side_effect = lambda _, org: org
@@ -802,6 +805,13 @@ class TestTV(unittest.TestCase):
                 pathlib.Path(
                     "fixtures/tv/Ted Lasso/Season 01/Ted Lasso -01.03- Trent Crimm: The Independent.mkv"
                 ).resolve(),  # type: ignore
+            )
+
+            # The pathlib.Path.chmod and shutil.chown functions can be assumed to work properly,
+            # we just need to assert that they were called with the correct values.
+            mock_chmod.assert_called_with(0o644)
+            mock_chown.assert_called_with(
+                self.tv_all_data.path, user="nielsen_user", group="nielsen_group"
             )
 
     def test_transform(self):
@@ -862,7 +872,9 @@ class TestTV(unittest.TestCase):
         season: int = 1
         episode: int = 3
         title: str = "Trent Crimm: The Independent"
-        expected: str = f"<TV(self.{path=}, self.{series=}, self.{season=}, self.{episode=}, self.{title=})>"
+        expected: str = (
+            f"<TV(self.{path=}, self.{series=}, self.{season=}, self.{episode=}, self.{title=})>"
+        )
 
         self.assertEqual(expected, repr(self.tv_all_data))
 

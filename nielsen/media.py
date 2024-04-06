@@ -24,7 +24,7 @@ import logging
 import pathlib
 import re
 from dataclasses import dataclass, field
-from shutil import move
+from shutil import chown, move
 from string import capwords
 from typing import Any, Pattern
 
@@ -223,6 +223,17 @@ class Media:
                 move(self.path, self.orgdir / self.path.name)
             ).resolve()
             logger.debug("New path: %s", self.path)
+
+        self.path.chmod(int(config.get(self.section, "mode"), 8))
+
+        # If chown gets a None value for user or group, it won't modify the existing
+        # values. Use None as a fallback to leave things alone unless the user has
+        # explicitly set a different value in their configuration.
+        chown(  # type: ignore
+            self.path,
+            user=config.get(self.section, "owner", fallback=None),  # type: ignore
+            group=config.get(self.section, "group", fallback=None),  # type: ignore
+        )
 
         return self.path
 
