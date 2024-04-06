@@ -688,6 +688,12 @@ class TestTV(unittest.TestCase):
                 "episode": 11,
                 "title": "This Is Your Brian On Drugs",
             },
+            "What.If.2021.S02E08.What.if.the.Avengers.Assembled.in.1602.1080p.DSNP.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv": {
+                "series": "What If",
+                "season": 2,
+                "episode": 8,
+                "title": "What If The Avengers Assembled In 1602",
+            },
         }
 
         for filename, metadata in media.items():
