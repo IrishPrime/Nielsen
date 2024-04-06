@@ -121,15 +121,6 @@ the first result is used.
 
 *Default*: `True`
 
-##### `library`
-
-The root directory into which a file should be moved as part of its processing.
-Each `Media` type may define its own `library` path.
-
-*Value*: *A directory the user can write to*
-
-*Default*: `$HOME`
-
 ##### `logfile`
 
 The location on disk to which `nielsen` log output should be written.
@@ -191,7 +182,37 @@ processing. The exact nature of these transformations are defined by the
 #### `[media]`
 
 Contains options to apply to generic `Media` objects. Currently, there's no
-real use for this.
+real use for this. However, options described here can be used in any other
+`Media` type section (e.g. `tv`).
+
+##### `library`
+
+The root directory into which a file should be moved as part of its processing.
+Each `Media` type may define its own `library` path.
+
+*Value*: *A directory the user can write to*
+
+*Default*: `$HOME`
+
+##### `owner`
+
+The user name or system UID which should own the file after organizing. This
+value is optional, and if left undefined, the file ownership will not be
+changed when organizing.
+
+*Value*: A system username (e.g. `irish`) or UID (e.g. `1000`).
+
+*Default*: `None`
+
+##### `group`
+
+The group name or system GID which should own the file after organizing. This
+value is optional, and if left undefined, the file ownership will not be
+changed when organizing.
+
+*Value*: A system group name (e.g. `user`) or GID (e.g. `1001`).
+
+*Default*: `None`
 
 #### `[tv]`
 
