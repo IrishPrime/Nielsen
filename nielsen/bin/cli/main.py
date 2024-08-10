@@ -16,7 +16,7 @@ import nielsen.bin.cli.tv
 
 import typer
 
-nielsen.config.load_config()
+config_files: list[str] = nielsen.config.load_config()
 logger: logging.Logger = logging.getLogger("nielsen")
 
 logging.basicConfig(
@@ -121,6 +121,11 @@ def process(
 
     for file in files:
         processor.process(Path(file))
+
+    # Due to the order in which configuration files are loaded, the most "personal"
+    # version will be at the end of the list.
+    if config_files:
+        nielsen.config.update_config(Path(config_files[-1]))
 
 
 def main() -> None:

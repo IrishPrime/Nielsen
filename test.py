@@ -8,7 +8,6 @@ import pickle
 import re
 import unittest
 import unittest.util
-import typing_extensions
 from configparser import ConfigParser
 from unittest import mock
 from typing import Any, Pattern
@@ -32,6 +31,7 @@ class TestConfig(unittest.TestCase):
     def setUp(self):
         """Clear the config to avoid execution order complications."""
 
+        self.CONFIG_FILE: pathlib.Path = pathlib.Path("fixtures/config.ini")
         self.config: ConfigParser = nielsen.config.config
         self.config.clear()
 
@@ -82,17 +82,17 @@ class TestConfig(unittest.TestCase):
         """Load config from a specific file."""
 
         with self.assertLogs("nielsen.config", logging.DEBUG) as cm:
-            config = nielsen.config.load_config(pathlib.Path("fixtures/config.ini"))
+            files: list[str] = nielsen.config.load_config(self.CONFIG_FILE)
             self.assertEqual(
                 "Loaded configuration from: ['fixtures/config.ini']",
                 cm.records[0].message,
             )
 
         self.assertTrue(
-            config.has_section("unit tests"),
+            nielsen.config.config.has_section("unit tests"),
             "The config must have the section from the config file fixture.",
         )
-        self.assertEqual(config.get("unit tests", "foo"), "bar")
+        self.assertEqual(nielsen.config.config.get("unit tests", "foo"), "bar")
 
     def test_load_config_missing_file(self):
         """Specify a missing configuration file to load."""
@@ -118,6 +118,17 @@ class TestConfig(unittest.TestCase):
         self.assertGreater(
             file.stat().st_size, 100, f"{file} must have some data in it."
         )
+
+    @mock.patch("nielsen.config.load_config")
+    @mock.patch("nielsen.config.write_config")
+    def test_update_config(
+        self, mock_write_config: mock.Mock, mock_load_config: mock.Mock
+    ):
+        """Call load_config and write_config with the correct arguments."""
+
+        nielsen.config.update_config(self.CONFIG_FILE)
+        mock_load_config.assert_called_with(self.CONFIG_FILE)
+        mock_write_config.assert_called_with(self.CONFIG_FILE)
 
 
 class TestMedia(unittest.TestCase):
@@ -789,36 +800,35 @@ class TestTV(unittest.TestCase):
         self.assertTrue(self.tv_all_data.path.exists())
         self.tv_all_data.path.unlink()
 
-    def test_organize_success(self):
+    @mock.patch("nielsen.media.chown")
+    @mock.patch("nielsen.media.move")
+    @mock.patch("pathlib.Path.chmod")
+    @mock.patch("pathlib.Path.is_file")
+    def test_organize_success(self, mock_is_file, mock_chmod, mock_move, mock_chown):
         """Organize file, set and return new path."""
 
-        with mock.patch("pathlib.Path.is_file") as mock_is_file, mock.patch(
-            "nielsen.media.move"
-        ) as mock_move, mock.patch("pathlib.Path.chmod") as mock_chmod, mock.patch(
-            "nielsen.media.chown"
-        ) as mock_chown:
-            # Mock the existence of the file on disk to avoid creating and removing
-            # files on every test.
-            mock_is_file.return_value = True
+        # Mock the existence of the file on disk to avoid creating and removing
+        # files on every test.
+        mock_is_file.return_value = True
 
-            # shutil.move moves a file and returns the destination path passed as an
-            # argument. Mock it by just returning the input argument.
-            mock_move.side_effect = lambda _, org: org
+        # shutil.move moves a file and returns the destination path passed as an
+        # argument. Mock it by just returning the input argument.
+        mock_move.side_effect = lambda _, org: org
 
-            self.assertIsInstance(self.tv_all_data.path, pathlib.Path)
-            self.assertEqual(
-                self.tv_all_data.organize(),
-                pathlib.Path(
-                    "fixtures/tv/Ted Lasso/Season 01/Ted Lasso -01.03- Trent Crimm: The Independent.mkv"
-                ).resolve(),  # type: ignore
-            )
+        self.assertIsInstance(self.tv_all_data.path, pathlib.Path)
+        self.assertEqual(
+            self.tv_all_data.organize(),
+            pathlib.Path(
+                "fixtures/tv/Ted Lasso/Season 01/Ted Lasso -01.03- Trent Crimm: The Independent.mkv"
+            ).resolve(),
+        )
 
-            # The pathlib.Path.chmod and shutil.chown functions can be assumed to work properly,
-            # we just need to assert that they were called with the correct values.
-            mock_chmod.assert_called_with(0o644)
-            mock_chown.assert_called_with(
-                self.tv_all_data.path, user="nielsen_user", group="nielsen_group"
-            )
+        # The pathlib.Path.chmod and shutil.chown functions can be assumed to work properly,
+        # we just need to assert that they were called with the correct values.
+        mock_chmod.assert_called_with(0o644)
+        mock_chown.assert_called_with(
+            self.tv_all_data.path, "nielsen_user", "nielsen_group"
+        )
 
     def test_transform(self):
         """Transform series names based on values from the tv/series/transform config section."""
@@ -878,9 +888,7 @@ class TestTV(unittest.TestCase):
         season: int = 1
         episode: int = 3
         title: str = "Trent Crimm: The Independent"
-        expected: str = (
-            f"<TV(self.{path=}, self.{series=}, self.{season=}, self.{episode=}, self.{title=})>"
-        )
+        expected: str = f"<TV(self.{path=}, self.{series=}, self.{season=}, self.{episode=}, self.{title=})>"
 
         self.assertEqual(expected, repr(self.tv_all_data))
 

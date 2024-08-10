@@ -41,9 +41,10 @@ config[config.default_section] = {
 }
 
 
-def load_config(path: Optional[pathlib.Path] = None) -> ConfigParser:
-    """Load a configuration from a file. If no file path is provided, default
-    configuration file locations are used. Returns a ConfigParser object."""
+def load_config(path: Optional[pathlib.Path] = None) -> list[str]:
+    """Load a configuration from a file into the global configuration object. If no file
+    path is provided, default configuration file locations are used. Returns a list of
+    files loaded."""
 
     global config
     files: list[str]
@@ -58,7 +59,7 @@ def load_config(path: Optional[pathlib.Path] = None) -> ConfigParser:
         else:
             logger.error("Failed to load configuration from: %s", path)
 
-    return config
+    return files
 
 
 def write_config(path: pathlib.Path) -> None:
@@ -70,12 +71,12 @@ def write_config(path: pathlib.Path) -> None:
         config.write(file)
 
 
-def update_config(path: pathlib.Path) -> None:  # pragma: no cover
+def update_config(path: pathlib.Path) -> None:
     """Write new data to the config file without changing options already present in the
     config files. By re-reading the config files before writing, runtime options or
     other dynamic changes to the config will be reverted before the file is written."""
 
-    load_config()
+    load_config(path.expanduser())
     write_config(path.expanduser())
 
 

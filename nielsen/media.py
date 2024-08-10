@@ -229,11 +229,11 @@ class Media:
         # If chown gets a None value for user or group, it won't modify the existing
         # values. Use None as a fallback to leave things alone unless the user has
         # explicitly set a different value in their configuration.
-        chown(  # type: ignore
-            self.path,
-            user=config.get(self.section, "owner", fallback=None),  # type: ignore
-            group=config.get(self.section, "group", fallback=None),  # type: ignore
-        )
+        user: str | None = config.get(self.section, "owner", fallback=None)
+        group: str | None = config.get(self.section, "group", fallback=None)
+
+        if user or group:
+            chown(self.path, user, group)  # type: ignore
 
         return self.path
 
@@ -245,7 +245,7 @@ class Media:
         raise NotImplementedError
 
     @metadata.setter
-    def metadata(self, value: dict[str, Any]) -> None:
+    def metadata(self, metadata: dict[str, Any]) -> None:
         """Set the metadata property. Must be a dictionary, but subclasses should
         implement their own transformations (if any) by implementing this setter
         method."""
