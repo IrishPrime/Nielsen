@@ -12,7 +12,7 @@ your media directories tidy.
 
 ## Requirements
 
-- Python 3.11 (or newer)
+- Python 3.12 (or newer)
 - [Poetry][poetry] (for source installations)
 
 ## Install
