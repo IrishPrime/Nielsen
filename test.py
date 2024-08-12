@@ -955,7 +955,7 @@ class TestTVMaze(unittest.TestCase):
         )
 
         self.assertEqual(
-            self.fetcher.get_series_id(self.ted_lasso),
+            self.fetcher.get_series_id(self.ted_lasso.series),
             self.ted_lasso_id,
             "Should get ID from config file",
         )
@@ -982,7 +982,7 @@ class TestTVMaze(unittest.TestCase):
 
         mock_get.return_value = resp_ok
         self.assertEqual(
-            self.fetcher.get_series_id(self.ted_lasso),
+            self.fetcher.get_series_id(self.ted_lasso.series),
             self.ted_lasso_id,
             "Should get ID from TVMaze response",
         )
@@ -998,7 +998,7 @@ class TestTVMaze(unittest.TestCase):
         self.fetcher.get_series_id_singlesearch.reset_mock()
         mock_get.return_value = resp_not_ok
         self.assertEqual(
-            self.fetcher.get_series_id(self.ted_lasso),
+            self.fetcher.get_series_id(self.ted_lasso.series),
             0,
             "Should return 0 on a 'not ok' TVMaze response",
         )
@@ -1011,7 +1011,7 @@ class TestTVMaze(unittest.TestCase):
     ):
         """Get series ID from TVMaze API with multiple results."""
 
-        mock_input.side_effect = "0"
+        mock_input.side_effect = "1"
         fixtures: list[dict[str, Any]] = [
             {
                 "id": self.agents_of_shield_id,
@@ -1051,13 +1051,15 @@ class TestTVMaze(unittest.TestCase):
 
                 self.assertEqual(
                     self.fetcher.get_series_id(
-                        media=fixture["media"], interactive=True
+                        series=fixture["media"].series, interactive=True
                     ),
                     fixture["id"],
                     "Should get ID from TVMaze response",
                 )
 
-                self.fetcher.get_series_id_search.assert_called_with(fixture["media"])
+                self.fetcher.get_series_id_search.assert_called_with(
+                    fixture["media"].series
+                )
 
     @mock.patch("nielsen.fetcher.requests.get")
     def test_get_episode_title(self, mock_get):
