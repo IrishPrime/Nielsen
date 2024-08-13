@@ -998,7 +998,7 @@ class TestTVMaze(unittest.TestCase):
         self.fetcher.get_series_id_singlesearch.reset_mock()
         mock_get.return_value = resp_not_ok
         self.assertEqual(
-            self.fetcher.get_series_id(self.ted_lasso.series),
+            self.fetcher.get_series_id_singlesearch(self.ted_lasso.series),
             0,
             "Should return 0 on a 'not ok' TVMaze response",
         )

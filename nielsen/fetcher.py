@@ -69,6 +69,9 @@ class TVMaze:
         series_id: int = lookup(series)
         logger.debug("Series: %s, ID: %s", series, series_id)
 
+        if series_id and not config.has_option(self.IDS, series):
+            self.set_series_id(series, series_id)
+
         return series_id
 
     def get_series_id_local(self, series: str) -> int:
@@ -79,16 +82,10 @@ class TVMaze:
     def get_series_id_search(self, series: str) -> int:
         """Get the series ID from the TVMaze `search` endpoint, which can return
         multiple results. If multiple results are returned, prompt the user to pick one.
-        URL: /search/shows?q=:query.
         """
 
-        request: str = (
-            f"{self.SERVICE}/search/shows/?q={urllib.parse.quote_plus(series)}"
-        )
-        response: requests.Response = requests.get(request)
+        response: requests.Response = self.search_shows(series)
         rjson: dict[Any, Any] = response.json()
-
-        logging.debug("Series: %s\nRequest: %r\nResponse: %s", series, request, rjson)
 
         series_id: int = 0
         # If TVMaze returns an empty list, return 0.
@@ -104,51 +101,9 @@ class TVMaze:
         # implementation, but a console prompt is sufficient for now since the console
         # frontend will be the first (and maybe only) implementation.
         print(f"Search results for: {series}")
-        for option, result in enumerate(rjson, start=1):
-            name: str = result["show"]["name"]
-            series_id: int = result["show"]["id"]
-            premiered: int = result["show"]["premiered"]
+        selection: dict = self.pick_series(rjson)
 
-            # All these ifs and try/except blocks look silly, but it's an order of
-            # magnitude faster than reducing or using defaultdict
-            if result["show"]["network"]:
-                try:
-                    network: str = result["show"]["network"].get("name", "Unknown")
-                except (AttributeError, KeyError, TypeError):
-                    network: str = "Unknown"
-
-                try:
-                    country: str = result["show"]["network"]["country"].get(
-                        "name", "Unknown"
-                    )
-                except (AttributeError, KeyError, TypeError):
-                    country: str = "Unknown"
-
-            elif result["show"]["webChannel"]:
-                try:
-                    network: str = result["show"]["webChannel"].get("name", "Unknown")
-                except (AttributeError, KeyError, TypeError):
-                    network: str = "Unknown"
-
-                try:
-                    country: str = result["show"]["webChannel"]["country"].get(
-                        "name", "Unknown"
-                    )
-                except (AttributeError, KeyError, TypeError):
-                    country: str = "Unknown"
-
-            else:
-                network: str = "Unknown"
-                country: str = "Unknown"
-
-            print(
-                f"{option}. {name} (Premiered: {premiered}, Network: {network}, Country: {country}, ID: {series_id})"
-            )
-        # TODO: Handle invalid selections.
-        selection: int = int(input("Select series: ")) - 1
-
-        # Add selected ID to config and return it.
-        series_id = rjson[selection]["show"]["id"]
+        series_id = selection["show"]["id"]
 
         return series_id
 
@@ -158,12 +113,8 @@ class TVMaze:
         URL: /singlesearch/shows?q=:query
         """
 
-        request: str = (
-            f"{self.SERVICE}/singlesearch/shows/?q={urllib.parse.quote_plus(series)}"
-        )
-        response: requests.Response = requests.get(request)
+        response: requests.Response = self.search_shows_single(series)
         rjson: dict[Any, Any] = response.json()
-        logger.debug("Media: %r\nRequest: %r\nResponse: %s", series, request, rjson)
 
         if response.ok:
             return rjson.get("id", 0)
@@ -197,64 +148,168 @@ class TVMaze:
 
         return episode_title
 
-    def search_series(self, series: str, interactive: bool = True) -> dict[str, Any]:
-        """Return a dictionary of information about a series."""
+    def get_season_id(self, series_id: int, season: int) -> int:
+        """Return information about a given `season` of a given `series_id`.
+        URL: /shows/:id/seasons"""
+
+        response: requests.Response = self.shows_seasons(series_id)
+        rjson: dict[Any, Any] = response.json()
+
+        for item in rjson:
+            match item:
+                case {"number": number} if number == season:
+                    return item["id"]
+
+        return 0
+
+    def search_shows(self, series: str, interactive: bool = True) -> requests.Response:
+        """Search TVMaze for the given `series` and return the `requests.Response`
+        object. URL: /search/shows?q=:query."""
 
         request: str = (
             f"{self.SERVICE}/search/shows/?q={urllib.parse.quote_plus(series)}"
         )
 
+        logging.debug("Series: %s\nRequest: %r", series, request)
+
         response: requests.Response = requests.get(request)
-        rjson: dict[Any, Any] = response.json()
 
-        if len(rjson) == 1 or not interactive:
-            return rjson[0]["show"]
+        return response
 
-        for option, result in enumerate(rjson, start=1):
-            name: str = result["show"]["name"]
-            series_id: int = result["show"]["id"]
-            premiered: int = result["show"]["premiered"]
+    def search_shows_single(self, series: str) -> requests.Response:
+        """Search TVMaze for the given `series` and return the `requests.Response`
+        object containing information about the single best result.
+        URL: /singlesearch/shows?q=:query"""
 
-            # All these ifs and try/except blocks look silly, but it's an order of
-            # magnitude faster than reducing or using defaultdict
-            if result["show"]["network"]:
-                try:
-                    network: str = result["show"]["network"].get("name", "Unknown")
-                except (AttributeError, KeyError, TypeError):
-                    network: str = "Unknown"
+        request: str = (
+            f"{self.SERVICE}/singlesearch/shows/?q={urllib.parse.quote_plus(series)}"
+        )
+        logger.debug("Series: %r\nRequest: %r", series, request)
+        response: requests.Response = requests.get(request)
+        logger.debug(response)
 
-                try:
-                    country: str = result["show"]["network"]["country"].get(
-                        "name", "Unknown"
+        return response
+
+    def episodebynumber(
+        self, series: int | str, season: int, episode: int
+    ) -> requests.Response:
+        if isinstance(series, int):
+            series_id: int = series
+        elif isinstance(series, str):
+            series_id: int = self.get_series_id(series)
+
+        if not series_id:
+            raise ValueError("No Series ID")
+
+        request: str = f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={season}&number={episode}"
+        response: requests.Response = requests.get(request)
+
+        return response
+
+    def seasons_episodes(self, season_id: int) -> requests.Response:
+        """URL: /seasons/:id/episodes"""
+
+        request: str = f"{self.SERVICE}/seasons/{season_id}/episodes"
+        logger.debug("Request: %s", request)
+        response: requests.Response = requests.get(request)
+
+        return response
+
+    def shows(self, series_id: int) -> requests.Response:
+        """URL: /shows/:id"""
+
+        request: str = f"{self.SERVICE}/shows/{series_id}"
+        logger.debug("Request: %s", request)
+        response: requests.Response = requests.get(request)
+
+        return response
+
+    def shows_seasons(self, series_id: int) -> requests.Response:
+        """URL: /shows/:id/seasons"""
+
+        request: str = f"{self.SERVICE}/shows/{series_id}/seasons"
+        logger.debug("Request: %s", request)
+        response: requests.Response = requests.get(request)
+
+        return response
+
+    @staticmethod
+    def pick_series(results: dict) -> dict[str, Any]:
+        """Display a text-based picker to choose a single show from multiple results."""
+
+        for option, result in enumerate(results, start=1):
+            match result:
+                # Network Television
+                case {
+                    "show": {
+                        "name": name,
+                        "id": series_id,
+                        "premiered": premiered,
+                        "network": {"name": nw_name, "country": nw_country},
+                    }
+                }:
+                    logger.debug("Matched Network")
+                    name: str = name
+                    series_id: int = series_id
+                    premiered: str = premiered
+                    network: str = nw_name
+                    country: str = (
+                        nw_country.get("name", "Unknown") if nw_country else "Unknown"
                     )
-                except (AttributeError, KeyError, TypeError):
+
+                # Streaming Platforms
+                case {
+                    "show": {
+                        "name": name,
+                        "id": series_id,
+                        "premiered": premiered,
+                        "webChannel": {"name": wc_name, "country": wc_country},
+                    }
+                }:
+                    logger.debug("Matched Streaming")
+                    name: str = name
+                    series_id: int = series_id
+                    premiered: str = premiered
+                    network: str = wc_name
+                    country: str = (
+                        wc_country.get("name", "Unknown") if wc_country else "Unknown"
+                    )
+
+                # Minimal Results
+                case {
+                    "show": {
+                        "name": name,
+                        "id": series_id,
+                        "premiered": premiered,
+                    }
+                }:
+                    logger.debug("Matched Minimal")
+                    name: str = name
+                    series_id: int = series_id
+                    premiered: str = premiered
+                    network: str = "Unknown"
                     country: str = "Unknown"
 
-            elif result["show"]["webChannel"]:
-                try:
-                    network: str = result["show"]["webChannel"].get("name", "Unknown")
-                except (AttributeError, KeyError, TypeError):
+                # This should never happen
+                case _:
+                    logger.error("Unable to parse search result")
+                    logger.debug(result)
+                    name: str = "Unknown"
+                    series_id: int = 0
+                    premiered: str = "Unknown"
                     network: str = "Unknown"
-
-                try:
-                    country: str = result["show"]["webChannel"]["country"].get(
-                        "name", "Unknown"
-                    )
-                except (AttributeError, KeyError, TypeError):
                     country: str = "Unknown"
-
-            else:
-                network: str = "Unknown"
-                country: str = "Unknown"
 
             print(
                 f"{option}. {name} (Premiered: {premiered}, Network: {network}, Country: {country}, ID: {series_id})"
             )
 
-        # TODO: Handle invalid selections.
-        selection: int = int(input("Select series: "))
+        # Start with an invalid selection to start the loop
+        selection: int = -1
+        while 0 > selection or selection >= len(results):
+            selection = int(input("Select series: ")) - 1
 
-        return rjson[selection - 1]["show"]
+        return results[selection]
 
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab textwidth=88

@@ -3,6 +3,7 @@
 
 import logging
 from pathlib import Path
+from requests import Response
 from typing import Any, Optional
 from typing_extensions import Annotated
 
@@ -17,12 +18,12 @@ from rich.pretty import pprint
 
 
 logger: logging.Logger = logging.getLogger(__name__)
-nielsen.config.load_config()
+config_files: list[str] = nielsen.config.load_config()
 
 app: typer.Typer = typer.Typer(name="TV")
 
 
-@app.command()
+@app.command(no_args_is_help=True)
 def info(
     series: Annotated[
         Optional[str], typer.Option(help="Show title to search for")
@@ -46,7 +47,8 @@ def info(
         ),
     ] = True,
 ) -> None:
-    """Search for a TV series by title."""
+    """Get information about a TV show. The more information provided to the command,
+    the more specific the returned results."""
 
     if series and series_id:
         typer.echo("The --series and --series-id options are mutually exclusive.")
@@ -65,13 +67,26 @@ def info(
         series_id = fetcher.get_series_id(series, interactive)
 
     if series_id and season and episode:
-        typer.echo("Get additional information for the episode")
+        # Create a TV instance with a dummy path and attach metadata to it for the
+        # Fetcher to work with
+        typer.echo("Get information about the episode")
+        response: Response = fetcher.episodebynumber(series_id, season, episode)
 
     elif series_id and season:
-        typer.echo("Get additional information for the season")
+        typer.echo("Get information about the season")
+        season_id: int = fetcher.get_season_id(series_id, season)
+        response: Response = fetcher.seasons_episodes(season_id)
 
     elif series_id:
-        typer.echo(f"{series_id=}")
+        typer.echo("Get information about the series")
+        response: Response = fetcher.shows(series_id)
+
+    else:
+        raise typer.Exit(4)
+
+    if response:
+        pprint(response.json())
+        nielsen.config.update_config(Path(config_files[-1]))
 
 
 if __name__ == "__main__":
