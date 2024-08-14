@@ -2,7 +2,7 @@
 
 import logging
 import urllib.parse
-from typing import Any, Optional, Protocol, TypeVar
+from typing import Any, Callable, Optional, Protocol, TypeVar
 
 import requests
 
@@ -79,9 +79,14 @@ class TVMaze:
 
         return config.getint(self.IDS, series, fallback=0)
 
-    def get_series_id_search(self, series: str) -> int:
+    def get_series_id_search(
+        self,
+        series: str,
+        picker: Callable[[str, dict[Any, Any]], dict[str, Any]] | None = None,
+    ) -> int:
         """Get the series ID from the TVMaze `search` endpoint, which can return
         multiple results. If multiple results are returned, prompt the user to pick one.
+        The `picker` defines this behavior.
         """
 
         response: requests.Response = self.search_shows(series)
@@ -97,11 +102,10 @@ class TVMaze:
             return rjson[0]["show"]["id"]
 
         # If multiple results, offer a means of selecting the correct one.
-        # TODO: The nature of the picker should be left up to the frontend
-        # implementation, but a console prompt is sufficient for now since the console
-        # frontend will be the first (and maybe only) implementation.
-        print(f"Search results for: {series}")
-        selection: dict = self.pick_series(rjson)
+        if picker is None:
+            picker = self.pick_series
+
+        selection: dict = picker(series, rjson)
 
         series_id = selection["show"]["id"]
 
@@ -162,17 +166,16 @@ class TVMaze:
 
         return 0
 
-    def search_shows(self, series: str, interactive: bool = True) -> requests.Response:
+    def search_shows(self, series: str) -> requests.Response:
         """Search TVMaze for the given `series` and return the `requests.Response`
         object. URL: /search/shows?q=:query."""
 
         request: str = (
             f"{self.SERVICE}/search/shows/?q={urllib.parse.quote_plus(series)}"
         )
-
         logging.debug("Series: %s\nRequest: %r", series, request)
-
         response: requests.Response = requests.get(request)
+        logging.debug(response)
 
         return response
 
@@ -234,8 +237,10 @@ class TVMaze:
         return response
 
     @staticmethod
-    def pick_series(results: dict) -> dict[str, Any]:
+    def pick_series(query: str, results: dict[Any, Any]) -> dict[str, Any]:
         """Display a text-based picker to choose a single show from multiple results."""
+
+        print(f"Search results for: {query}")
 
         for option, result in enumerate(results, start=1):
             match result:

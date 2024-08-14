@@ -2,20 +2,20 @@
 """Subcommands for managing TV shows with Nielsen."""
 
 import logging
+from html.parser import HTMLParser
+from io import StringIO
 from pathlib import Path
+from typing import Any, Callable, Optional
+
+import typer
 from requests import Response
-from typing import Any, Optional
+from rich.pretty import pprint
 from typing_extensions import Annotated
 
 import nielsen.config
 import nielsen.fetcher
 import nielsen.media
 from nielsen.config import config as config
-
-import typer
-
-from rich.pretty import pprint
-
 
 logger: logging.Logger = logging.getLogger(__name__)
 config_files: list[str] = nielsen.config.load_config()
@@ -46,6 +46,10 @@ def info(
             help="Interactively select from multiple results",
         ),
     ] = True,
+    raw: Annotated[
+        bool,
+        typer.Option(is_flag=True, help="Print the JSON formatted API response"),
+    ] = False,
 ) -> None:
     """Get information about a TV show. The more information provided to the command,
     the more specific the returned results."""
@@ -62,6 +66,7 @@ def info(
         raise typer.Exit(3)
 
     fetcher: nielsen.fetcher.TVMaze = nielsen.fetcher.TVMaze()
+    response_formatter: Callable = pprint
 
     if series:
         series_id = fetcher.get_series_id(series, interactive)
@@ -71,22 +76,73 @@ def info(
         # Fetcher to work with
         typer.echo("Get information about the episode")
         response: Response = fetcher.episodebynumber(series_id, season, episode)
+        if not raw:
+            response_formatter = pretty_episode
 
     elif series_id and season:
         typer.echo("Get information about the season")
         season_id: int = fetcher.get_season_id(series_id, season)
         response: Response = fetcher.seasons_episodes(season_id)
+        if not raw:
+            response_formatter = pretty_season
 
     elif series_id:
         typer.echo("Get information about the series")
         response: Response = fetcher.shows(series_id)
+        if not raw:
+            response_formatter = pretty_series
 
     else:
         raise typer.Exit(4)
 
     if response:
-        pprint(response.json())
+        response_formatter(response.json())
         nielsen.config.update_config(Path(config_files[-1]))
+
+
+def pretty_series(data: dict[Any, Any]) -> None:
+    print(
+        f"{data['name']} - ID: {data['id']} - {data['url']}",
+        f"Premiered: {data['premiered']} - Status: {data['status']}",
+        f"{strip_tags(data['summary'])}",
+        sep="\n",
+    )
+
+
+def pretty_season(data: dict[Any, Any]) -> None:
+    for episode in data:
+        print(
+            f"{episode['season']}x{episode['number']} - {episode["name"]}",
+            f"{strip_tags(episode['summary'])}",
+            f"{episode['url']}",
+            sep="\n",
+            end="\n\n",
+        )
+
+
+def pretty_episode(data: dict[Any, Any]) -> None:
+    pass
+
+
+class MLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+        self.strict = False
+        self.convert_charrefs = True
+        self.text = StringIO()
+
+    def handle_data(self, d):
+        self.text.write(d)
+
+    def get_data(self):
+        return self.text.getvalue()
+
+
+def strip_tags(html):
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
 
 
 if __name__ == "__main__":
