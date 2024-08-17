@@ -22,7 +22,7 @@ app: typer.Typer = typer.Typer(name="TV")
 
 
 @app.command(no_args_is_help=True)
-def info(
+def fetch(
     series: Annotated[
         Optional[str], typer.Option(help="Show title to search for")
     ] = None,
@@ -49,7 +49,7 @@ def info(
         typer.Option(is_flag=True, help="Print the JSON formatted API response"),
     ] = False,
 ) -> None:
-    """Get information about a TV show. The more information provided to the command,
+    """Fetch information about a TV show. The more information provided to the command,
     the more specific the returned results."""
 
     if series and series_id:
@@ -64,7 +64,6 @@ def info(
         raise typer.Exit(3)
 
     fetcher: nielsen.fetcher.TVMaze = nielsen.fetcher.TVMaze()
-    response_formatter: Callable = pprint
 
     if series:
         series_id = fetcher.get_series_id(series, interactive)
@@ -72,60 +71,42 @@ def info(
     if series_id and season and episode:
         # Create a TV instance with a dummy path and attach metadata to it for the
         # Fetcher to work with
-        typer.echo("Get information about the episode")
         response: Response = fetcher.episodebynumber(series_id, season, episode)
-        if not raw:
-            response_formatter = pretty_episode
+        data: dict[str, Any] = response.json()
+
+        if raw:
+            pprint(data)
+        else:
+            fetcher.pretty_episode(data)
 
     elif series_id and season:
-        typer.echo("Get information about the season")
         season_id: int = fetcher.get_season_id(series_id, season)
         response: Response = fetcher.seasons_episodes(season_id)
-        if not raw:
-            response_formatter = pretty_season
+        data: dict[str, Any] = response.json()
+
+        if raw:
+            pprint(data)
+        else:
+            fetcher.pretty_season(data)
 
     elif series_id:
-        typer.echo("Get information about the series")
         response: Response = fetcher.shows(series_id)
-        if not raw:
-            response_formatter = pretty_series
+        data: dict[str, Any] = response.json()
+
+        if raw:
+            pprint(data)
+        else:
+            fetcher.pretty_series(data)
 
     else:
+        logger.critical("Could not fetch any information.")
         raise typer.Exit(4)
 
-    if response:
-        response_formatter(response.json())
+    if response.ok:
         nielsen.config.update_config(Path(config_files[-1]))
 
-
-def pretty_series(data: dict[Any, Any]) -> None:
-    print(
-        f"{data['name']} - ID: {data['id']} - {data['url']}",
-        f"Premiered: {data['premiered']} - Status: {data['status']}",
-        f"{nielsen.fetcher.strip_tags(data['summary'])}",
-        sep="\n",
-    )
-
-
-def pretty_season(data: dict[Any, Any]) -> None:
-    for episode in data:
-        print(
-            f"{episode['season']}x{episode['number']} - {episode["name"]}",
-            f"{episode['url']}",
-            f"{nielsen.fetcher.strip_tags(episode['summary'])}",
-            sep="\n",
-            end="\n\n",
-        )
-
-
-def pretty_episode(data: dict[Any, Any]) -> None:
-    print(
-        f"{data['season']}x{data['number']} - {data["name"]}",
-        f"{data['url']}",
-        f"{nielsen.fetcher.strip_tags(data['summary'])}",
-        sep="\n",
-    )
-
+@app.command(no_args_is_help=True)
+def apply() -> None:
 
 if __name__ == "__main__":
     app()

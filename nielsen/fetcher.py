@@ -144,9 +144,7 @@ class TVMaze:
         if not media.episode:
             raise ValueError("No Episode Number")
 
-        request: str = (
-            f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={media.season}&number={media.episode}"
-        )
+        request: str = f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={media.season}&number={media.episode}"
         response: requests.Response = requests.get(request)
         rjson: dict[Any, Any] = response.json()
         logging.debug("Media: %r\nRequest: %r\nResponse: %s", media, request, rjson)
@@ -208,9 +206,7 @@ class TVMaze:
         if not series_id:
             raise ValueError("No Series ID")
 
-        request: str = (
-            f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={season}&number={episode}"
-        )
+        request: str = f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={season}&number={episode}"
         response: requests.Response = requests.get(request)
 
         return response
@@ -321,6 +317,35 @@ class TVMaze:
             selection = int(input("Select series: ")) - 1
 
         return results[selection]
+
+    @staticmethod
+    def pretty_series(data: dict[Any, Any]) -> None:
+        print(
+            f"{data['name']} - ID: {data['id']} - {data['url']}",
+            f"Premiered: {data['premiered']} - Status: {data['status']}",
+            f"{strip_tags(data['summary'])}",
+            sep="\n",
+        )
+
+    @staticmethod
+    def pretty_season(data: dict[Any, Any]) -> None:
+        for episode in data:
+            print(
+                f"{episode['season']}x{episode['number']} - {episode["name"]}",
+                f"{episode['url']}",
+                f"{strip_tags(episode['summary'])}",
+                sep="\n",
+                end="\n\n",
+            )
+
+    @staticmethod
+    def pretty_episode(data: dict[Any, Any]) -> None:
+        print(
+            f"{data['season']}x{data['number']} - {data["name"]}",
+            f"{data['url']}",
+            f"{strip_tags(data['summary'])}",
+            sep="\n",
+        )
 
 
 class MLStripper(HTMLParser):
