@@ -2,6 +2,8 @@
 
 import logging
 import urllib.parse
+from html.parser import HTMLParser
+from io import StringIO
 from typing import Any, Callable, Optional, Protocol, TypeVar
 
 import requests
@@ -142,7 +144,9 @@ class TVMaze:
         if not media.episode:
             raise ValueError("No Episode Number")
 
-        request: str = f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={media.season}&number={media.episode}"
+        request: str = (
+            f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={media.season}&number={media.episode}"
+        )
         response: requests.Response = requests.get(request)
         rjson: dict[Any, Any] = response.json()
         logging.debug("Media: %r\nRequest: %r\nResponse: %s", media, request, rjson)
@@ -204,7 +208,9 @@ class TVMaze:
         if not series_id:
             raise ValueError("No Series ID")
 
-        request: str = f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={season}&number={episode}"
+        request: str = (
+            f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={season}&number={episode}"
+        )
         response: requests.Response = requests.get(request)
 
         return response
@@ -315,6 +321,31 @@ class TVMaze:
             selection = int(input("Select series: ")) - 1
 
         return results[selection]
+
+
+class MLStripper(HTMLParser):
+    """Markup Language Stripper"""
+
+    def __init__(self):
+        super().__init__()
+        self.reset()
+        self.strict = False
+        self.convert_charrefs = True
+        self.text = StringIO()
+
+    def handle_data(self, data: str) -> None:
+        self.text.write(data)
+
+    def get_data(self) -> str:
+        return self.text.getvalue()
+
+
+def strip_tags(html):
+    """Strip HTML tags to make API responses more readable in the terminal."""
+
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
 
 
 # vim: tabstop=4 softtabstop=4 shiftwidth=4 expandtab textwidth=88

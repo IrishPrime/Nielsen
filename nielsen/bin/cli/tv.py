@@ -2,8 +2,6 @@
 """Subcommands for managing TV shows with Nielsen."""
 
 import logging
-from html.parser import HTMLParser
-from io import StringIO
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -104,7 +102,7 @@ def pretty_series(data: dict[Any, Any]) -> None:
     print(
         f"{data['name']} - ID: {data['id']} - {data['url']}",
         f"Premiered: {data['premiered']} - Status: {data['status']}",
-        f"{strip_tags(data['summary'])}",
+        f"{nielsen.fetcher.strip_tags(data['summary'])}",
         sep="\n",
     )
 
@@ -113,7 +111,7 @@ def pretty_season(data: dict[Any, Any]) -> None:
     for episode in data:
         print(
             f"{episode['season']}x{episode['number']} - {episode["name"]}",
-            f"{strip_tags(episode['summary'])}",
+            f"{nielsen.fetcher.strip_tags(episode['summary'])}",
             f"{episode['url']}",
             sep="\n",
             end="\n\n",
@@ -121,28 +119,9 @@ def pretty_season(data: dict[Any, Any]) -> None:
 
 
 def pretty_episode(data: dict[Any, Any]) -> None:
-    pass
-
-
-class MLStripper(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.reset()
-        self.strict = False
-        self.convert_charrefs = True
-        self.text = StringIO()
-
-    def handle_data(self, d):
-        self.text.write(d)
-
-    def get_data(self):
-        return self.text.getvalue()
-
-
-def strip_tags(html):
-    s = MLStripper()
-    s.feed(html)
-    return s.get_data()
+    print(
+        f"{data['season']}x{data['number']} - {data["name"]}",
+    )
 
 
 if __name__ == "__main__":
