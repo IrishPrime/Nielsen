@@ -111,8 +111,8 @@ def pretty_season(data: dict[Any, Any]) -> None:
     for episode in data:
         print(
             f"{episode['season']}x{episode['number']} - {episode["name"]}",
-            f"{nielsen.fetcher.strip_tags(episode['summary'])}",
             f"{episode['url']}",
+            f"{nielsen.fetcher.strip_tags(episode['summary'])}",
             sep="\n",
             end="\n\n",
         )
@@ -121,6 +121,9 @@ def pretty_season(data: dict[Any, Any]) -> None:
 def pretty_episode(data: dict[Any, Any]) -> None:
     print(
         f"{data['season']}x{data['number']} - {data["name"]}",
+        f"{data['url']}",
+        f"{nielsen.fetcher.strip_tags(data['summary'])}",
+        sep="\n",
     )
 
 
