@@ -144,7 +144,9 @@ class TVMaze:
         if not media.episode:
             raise ValueError("No Episode Number")
 
-        request: str = f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={media.season}&number={media.episode}"
+        request: str = (
+            f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={media.season}&number={media.episode}"
+        )
         response: requests.Response = requests.get(request)
         rjson: dict[Any, Any] = response.json()
         logging.debug("Media: %r\nRequest: %r\nResponse: %s", media, request, rjson)
@@ -198,6 +200,7 @@ class TVMaze:
     def episodebynumber(
         self, series: int | str, season: int, episode: int
     ) -> requests.Response:
+        """URL: /shows/:id/episodebynumber?season=:season&number=:episode"""
         if isinstance(series, int):
             series_id: int = series
         elif isinstance(series, str):
@@ -206,7 +209,9 @@ class TVMaze:
         if not series_id:
             raise ValueError("No Series ID")
 
-        request: str = f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={season}&number={episode}"
+        request: str = (
+            f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={season}&number={episode}"
+        )
         response: requests.Response = requests.get(request)
 
         return response

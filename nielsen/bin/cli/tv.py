@@ -3,7 +3,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 import typer
 from requests import Response
@@ -24,7 +24,7 @@ app: typer.Typer = typer.Typer(name="TV")
 @app.command(no_args_is_help=True)
 def fetch(
     series: Annotated[
-        Optional[str], typer.Option(help="Show title to search for")
+        Optional[str], typer.Option(help="Show name to search for")
     ] = None,
     series_id: Annotated[
         Optional[int], typer.Option(help="The TVMaze series ID")
@@ -69,8 +69,6 @@ def fetch(
         series_id = fetcher.get_series_id(series, interactive)
 
     if series_id and season and episode:
-        # Create a TV instance with a dummy path and attach metadata to it for the
-        # Fetcher to work with
         response: Response = fetcher.episodebynumber(series_id, season, episode)
         data: dict[str, Any] = response.json()
 
@@ -105,8 +103,72 @@ def fetch(
     if response.ok:
         nielsen.config.update_config(Path(config_files[-1]))
 
-@app.command(no_args_is_help=True)
-def apply() -> None:
+
+@app.command()
+def apply(
+    files: Annotated[list[str], typer.Argument(help="File(s) to process")],
+    series: Annotated[Optional[str], typer.Option(help="Show name")],
+    season: Annotated[
+        int,
+        typer.Option(help="Season number (to get additional details)"),
+    ],
+    episode: Annotated[
+        Optional[int],
+        typer.Option(help="Episode number (to get additional details)"),
+    ] = None,
+    interactive: Annotated[
+        bool,
+        typer.Option(
+            is_flag=True,
+            help="Interactively select from multiple results",
+        ),
+    ] = True,
+) -> None:
+    """Apply episode information to the provided file(s)."""
+
+    if not series:
+        typer.echo("--series is required.")
+        raise typer.Exit(1)
+
+    if episode and not season:
+        typer.echo("Cannot fetch episode information without a season.")
+        raise typer.Exit(2)
+
+    fetcher: nielsen.fetcher.TVMaze = nielsen.fetcher.TVMaze()
+
+    series_id = fetcher.get_series_id(series, interactive)
+
+    if series_id and season and episode:
+        if len(files) != 1:
+            typer.echo("Must specify exactly one file to apply this data to.")
+            raise typer.Exit(3)
+
+        # Create a TV instance and attach metadata to it for the Fetcher to work with
+        media: nielsen.media.Media = nielsen.media.TV(
+            Path(files.pop()), series=series, season=season, episode=episode
+        )
+        fetcher.fetch(media)
+        media.rename()
+
+        return
+
+    season_id: int = fetcher.get_season_id(series_id, season)
+    response: Response = fetcher.seasons_episodes(season_id)
+    episodes: list[dict[str, Any]] = response.json()
+
+    pprint(episodes)
+
+    for e, f in zip(episodes, files):
+        media: nielsen.media.Media = nielsen.media.TV(
+            Path(f), series=series, season=season
+        )
+        print(
+            f"Apply information from {series} Season {season} Episode {e['number']} to {media.path}"
+        )
+        media.episode = e.get("number", 0)
+        media.title = e.get("name", "")
+        media.rename()
+
 
 if __name__ == "__main__":
     app()
