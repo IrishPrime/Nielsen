@@ -156,13 +156,11 @@ def apply(
     response: Response = fetcher.seasons_episodes(season_id)
     episodes: list[dict[str, Any]] = response.json()
 
-    pprint(episodes)
-
     for e, f in zip(episodes, files):
         media: nielsen.media.Media = nielsen.media.TV(
             Path(f), series=series, season=season
         )
-        print(
+        typer.echo(
             f"Apply information from {series} Season {season} Episode {e['number']} to {media.path}"
         )
         media.episode = e.get("number", 0)
