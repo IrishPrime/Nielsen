@@ -123,6 +123,10 @@ def apply(
             help="Interactively select from multiple results",
         ),
     ] = True,
+    simulate: Annotated[
+        bool,
+        typer.Option(help="Show file operations without performing them"),
+    ] = config.getboolean("nielsen", "simulate"),
 ) -> None:
     """Apply episode information to the provided file(s)."""
 
@@ -133,6 +137,8 @@ def apply(
     if episode and not season:
         typer.echo("Cannot fetch episode information without a season.")
         raise typer.Exit(2)
+
+    config.set("nielsen", "simulate", str(simulate))
 
     fetcher: nielsen.fetcher.TVMaze = nielsen.fetcher.TVMaze()
 
