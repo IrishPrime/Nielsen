@@ -78,6 +78,59 @@ nielsen process PATH_TO_FILE
 nielsen --help
 ```
 
+### `tv` subcommand
+
+The `tv` subcommand can be used to make some simple queries to TVMaze and to
+apply the results of those queries to files on-demand.
+
+#### `nielsen tv fetch`
+
+The `tv fetch` subcommand queries the TVMaze API. The more information you
+provide, the more specific the results. You can fetch information about a
+series, a season, or an episode.
+
+```bash
+# Get information about a series
+nielsen tv fetch --series "Ted Lasso"
+# Get information about a specific season of a series
+nielsen tv fetch --series "Ted Lasso" --season 2
+# Get information about a specific episode of a season of a series
+nielsen tv fetch --series "Ted Lasso" --season 2 --episode 5
+```
+
+Additionally, the `--raw` flag can be used with any of the commands above to
+pretty print the actual JSON response.
+
+#### `nielsen tv apply`
+
+The `tv apply` subcommand can be used to apply specific metadata to a file and
+rename it rather than attempting to infer all the metadata from the filename.
+
+For example, you may have a collection of files that are already organized by
+series name and season, but the file names are simply: `1.mkv`, `2.mkv`,
+`3.mkv`, etc. While you may know exactly what they are, `nielsen` only
+considers the filename when attempting to infer metadata (not parent directory
+names).
+
+Specifying the series name, season number, and episode number applies the
+information to a single file. Specifying only the series name and season number
+can apply information about each episode in the season to a collection of
+files.
+
+```bash
+# Rename a single file
+nielsen tv apply --series "Ted Lasso" --season 2 --episode 5 "5.mkv"
+# Map each file in a directory to an episode in a season
+nielsen tv apply --series "Ted Lasso" --season 2 $(ls | sort -n)
+```
+
+It's worth checking on how your shell will expand the `*` before attempting to
+use `apply` on all files in a directory, because the files are processed in the
+order they're given. Without leading zeroes, they're likely to expand in
+lexicographical order rather than numerical order, e.g. `1.mkv`, `10.mkv`,
+`11.mkv`, `2.mkv`, `3.mkv`, `4.mkv`, etc. `ls | sort -n` can be used to ensure
+the files are sorted numerically.
+
 ## Configuration
 
 `nielsen` uses an [INI file][wikipedia-ini] for configuration. The module will
