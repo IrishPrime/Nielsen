@@ -75,7 +75,7 @@ def fetch(
         if raw:
             pprint(data)
         else:
-            print(fetcher.pretty_episode(data))
+            typer.echo(fetcher.pretty_episode(data))
 
     elif series_id and season:
         season_id: int = fetcher.get_season_id(series_id, season)
@@ -85,7 +85,7 @@ def fetch(
         if raw:
             pprint(data)
         else:
-            print(fetcher.pretty_season(data))
+            typer.echo(fetcher.pretty_season(data))
 
     elif series_id:
         response: Response = fetcher.shows(series_id)
@@ -94,7 +94,7 @@ def fetch(
         if raw:
             pprint(data)
         else:
-            print(fetcher.pretty_series(data))
+            typer.echo(fetcher.pretty_series(data))
 
     else:
         logger.critical("Could not fetch any information.")
