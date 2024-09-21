@@ -11,11 +11,6 @@ clean:
 pickle:
 	./bin/pickler.py
 
-test:
-	-coverage run -m pytest test.py
-	-coverage html --skip-empty nielsen/*.py
-	-coverage report --skip-empty nielsen/*.py
-
 sdist: nielsen/*.py pyproject.toml README.md
 	poetry build --format=sdist
 
@@ -31,6 +26,5 @@ zsh:
 .PHONY: clean
 .PHONY: pickle
 .PHONY: sdist
-.PHONY: test
 .PHONY: wheel
 .PHONY: zsh

@@ -29,7 +29,7 @@ def pickle_data(data: Any, path: str) -> None:
     # Ensure all parent directories are created for the file. The fixtures directory
     # should be a sibling of the `bin` directory which contains this script.
     file: pathlib.Path = (
-        pathlib.Path(__file__).parent.parent / "fixtures/" / pathlib.Path(path)
+        pathlib.Path(__file__).parent.parent.parent / "fixtures/" / pathlib.Path(path)
     )
     file.parent.mkdir(parents=True, exist_ok=True)
     file.write_bytes(pickle.dumps(data))
@@ -42,12 +42,14 @@ def tvmaze() -> None:
     TVMAZE: str = "https://api.tvmaze.com"
     TRANSLATION = str.maketrans({" ": "-", "=": "-", "&": "-"})
     queries: list[dict[str, str]] = [
-        {"api": "singlesearch/shows", "params": "q=Ted+Lasso"},
-        {"api": "singlesearch/shows", "params": "q=useless+search+string"},
+        {"api": "search/shows", "params": "q=Agents+of+SHIELD"},
         {"api": "search/shows", "params": "q=Ted+Lasso"},
         {"api": "search/shows", "params": "q=useless+search+string"},
-        {"api": "search/shows", "params": "q=Agents+of+SHIELD"},
+        {"api": "seasons/112939/episodes", "params": ""},
         {"api": "shows/44458/episodebynumber", "params": "season=1&number=3"},
+        {"api": "shows/44458/seasons", "params": ""},
+        {"api": "singlesearch/shows", "params": "q=Ted+Lasso"},
+        {"api": "singlesearch/shows", "params": "q=useless+search+string"},
     ]
 
     for query in queries:

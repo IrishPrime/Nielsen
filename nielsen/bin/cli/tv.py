@@ -70,31 +70,31 @@ def fetch(
 
     if series_id and season and episode:
         response: Response = fetcher.episodebynumber(series_id, season, episode)
-        data: dict[str, Any] = response.json()
+        data: Any = response.json()
 
         if raw:
             pprint(data)
         else:
-            fetcher.pretty_episode(data)
+            print(fetcher.pretty_episode(data))
 
     elif series_id and season:
         season_id: int = fetcher.get_season_id(series_id, season)
         response: Response = fetcher.seasons_episodes(season_id)
-        data: dict[str, Any] = response.json()
+        data = response.json()
 
         if raw:
             pprint(data)
         else:
-            fetcher.pretty_season(data)
+            print(fetcher.pretty_season(data))
 
     elif series_id:
         response: Response = fetcher.shows(series_id)
-        data: dict[str, Any] = response.json()
+        data = response.json()
 
         if raw:
             pprint(data)
         else:
-            fetcher.pretty_series(data)
+            print(fetcher.pretty_series(data))
 
     else:
         logger.critical("Could not fetch any information.")

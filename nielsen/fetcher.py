@@ -15,7 +15,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 # Define a generic Media type so the Fetcher Protocol will recognize Media subclasses
-MT = TypeVar("MT", bound=nielsen.media.Media)
+MT = TypeVar("MT", bound=nielsen.media.Media, infer_variance=True)
 
 
 class Fetcher(Protocol):
@@ -40,8 +40,11 @@ class TVMaze:
         series_id: Optional[int] = self.get_series_id(
             media.series, config.getboolean("DEFAULT", "interactive")
         )
-        if series_id:
-            self.set_series_id(media.series, str(series_id))
+
+        if not series_id:
+            raise ValueError("No Series ID")
+
+        self.set_series_id(media.series, str(series_id))
         media.title = self.get_episode_title(media)
 
     def set_series_id(self, series: str, id: int | str) -> None:
@@ -59,7 +62,8 @@ class TVMaze:
     def get_series_id(self, series: str, interactive: bool = False) -> int:
         """Return the TVMaze ID for the series. Will check for a local config file first
         and search TVMaze if a local match isn't found. Optionally, prompt the user to
-        select the correct series interactively if multiple results are found."""
+        select the correct series interactively if multiple results are found. Returns 0
+        if no series ID can be found."""
 
         if config.has_option(self.IDS, series):
             lookup = self.get_series_id_local
@@ -84,7 +88,7 @@ class TVMaze:
     def get_series_id_search(
         self,
         series: str,
-        picker: Callable[[str, dict[Any, Any]], dict[str, Any]] | None = None,
+        picker: Callable[[str, list[dict[Any, Any]]], dict[str, Any]] | None = None,
     ) -> int:
         """Get the series ID from the TVMaze `search` endpoint, which can return
         multiple results. If multiple results are returned, prompt the user to pick one.
@@ -92,7 +96,7 @@ class TVMaze:
         """
 
         response: requests.Response = self.search_shows(series)
-        rjson: dict[Any, Any] = response.json()
+        rjson: list[dict[Any, Any]] = response.json()
 
         series_id: int = 0
         # If TVMaze returns an empty list, return 0.
@@ -144,12 +148,10 @@ class TVMaze:
         if not media.episode:
             raise ValueError("No Episode Number")
 
-        request: str = (
-            f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={media.season}&number={media.episode}"
+        response: requests.Response = self.episodebynumber(
+            series_id, media.season, media.episode
         )
-        response: requests.Response = requests.get(request)
         rjson: dict[Any, Any] = response.json()
-        logging.debug("Media: %r\nRequest: %r\nResponse: %s", media, request, rjson)
 
         if response.ok:
             episode_title = str(rjson.get("name"))
@@ -201,17 +203,16 @@ class TVMaze:
         self, series: int | str, season: int, episode: int
     ) -> requests.Response:
         """URL: /shows/:id/episodebynumber?season=:season&number=:episode"""
+
         if isinstance(series, int):
             series_id: int = series
         elif isinstance(series, str):
-            series_id: int = self.get_series_id(series)
+            series_id = self.get_series_id(series)
 
         if not series_id:
             raise ValueError("No Series ID")
 
-        request: str = (
-            f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={season}&number={episode}"
-        )
+        request: str = f"{self.SERVICE}/shows/{series_id}/episodebynumber?season={season}&number={episode}"
         response: requests.Response = requests.get(request)
 
         return response
@@ -244,7 +245,7 @@ class TVMaze:
         return response
 
     @staticmethod
-    def pick_series(query: str, results: dict[Any, Any]) -> dict[str, Any]:
+    def pick_series(query: str, results: list[dict[Any, Any]]) -> dict[str, Any]:
         """Display a text-based picker to choose a single show from multiple results."""
 
         print(f"Search results for: {query}")
@@ -304,6 +305,7 @@ class TVMaze:
 
                 # This should never happen
                 case _:
+                    # NOTE: It may be better to simply skip these results.
                     logger.error("Unable to parse search result")
                     logger.debug(result)
                     name: str = "Unknown"
@@ -324,32 +326,53 @@ class TVMaze:
         return results[selection]
 
     @staticmethod
-    def pretty_series(data: dict[Any, Any]) -> None:
-        print(
-            f"{data['name']} - ID: {data['id']} - {data['url']}",
-            f"Premiered: {data['premiered']} - Status: {data['status']}",
-            f"{strip_tags(data['summary'])}",
-            sep="\n",
+    def pretty_series(data: dict[str, Any]) -> str:
+        """Return a nicely formatted string of high-level information about the series
+        as a whole, such as the title, TVMaze ID, premiere date, whether it's currently
+        airing, and a plot summary.
+
+        This is intended to work with the results of the TVMaze `/shows/:id`
+        endpoint."""
+
+        return "\n".join(
+            (
+                f"{data['name']} - ID: {data['id']} - {data['url']}",
+                f"Premiered: {data['premiered']} - Status: {data['status']}",
+                f"{strip_tags(data['summary'])}",
+            )
         )
 
     @staticmethod
-    def pretty_season(data: dict[Any, Any]) -> None:
+    def pretty_season(data: list[dict[str, Any]]) -> str:
+        """Return a nicely formatted string containing information about every episode
+        in a season, including the season and episode numbers, episode title, a link
+        to the episode URL on TVMaze, and an episode summary.
+
+        This is intended to work with the results of the TVMaze `/seasons/:id/episodes`
+        endpoint."""
+
+        pretty_episodes: list[str] = []
+
         for episode in data:
-            print(
-                f"{episode['season']}x{episode['number']} - {episode["name"]}",
-                f"{episode['url']}",
-                f"{strip_tags(episode['summary'])}",
-                sep="\n",
-                end="\n\n",
-            )
+            pretty_episodes.append(__class__.pretty_episode(episode))
+
+        return "\n\n".join(pretty_episodes)
 
     @staticmethod
-    def pretty_episode(data: dict[Any, Any]) -> None:
-        print(
-            f"{data['season']}x{data['number']} - {data["name"]}",
-            f"{data['url']}",
-            f"{strip_tags(data['summary'])}",
-            sep="\n",
+    def pretty_episode(data: dict[str, Any]) -> str:
+        """Return a nicely formatted string of episode specific information, including
+        the season and episode numbers, episode title, a link to the episode URL on
+        TVMaze, and an episode summary.
+
+        This is intended to work with the results of the TVMaze `/seasons/:id/episodes`
+        and `/shows/:id/episodebynumber?season=:season&number=:number` endpoints."""
+
+        return "\n".join(
+            (
+                f"{data['season']}x{data['number']} - {data["name"]}",
+                f"{data['url']}",
+                f"{strip_tags(data['summary'])}",
+            )
         )
 
 
