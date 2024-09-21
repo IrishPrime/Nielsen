@@ -316,6 +316,7 @@ class TV(Media):
     """A Media subclass for TV shows."""
 
     series: str = ""
+    series_id: int = 0
     season: int = 0
     episode: int = 0
     title: str = ""

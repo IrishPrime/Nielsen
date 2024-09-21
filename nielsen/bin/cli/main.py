@@ -32,9 +32,13 @@ app.add_typer(
     nielsen.bin.cli.config.app,
     name="config",
     help="Subcommands for the Nielsen configuration",
+    no_args_is_help=True,
 )
 app.add_typer(
-    nielsen.bin.cli.tv.app, name="tv", help="Subcommands for interacting with TV shows"
+    nielsen.bin.cli.tv.app,
+    name="tv",
+    help="Subcommands for interacting with TV shows",
+    no_args_is_help=True,
 )
 
 
