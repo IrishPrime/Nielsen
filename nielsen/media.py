@@ -100,14 +100,16 @@ class Media:
         """Set the path property. Attempt to coerce the value to a Path if not
         provided as such."""
 
-        if not isinstance(value, pathlib.Path):
-            try:
+        try:
+            if not isinstance(value, pathlib.Path):
                 value = pathlib.Path(value)
+
+                # TODO Do not allow non-files
                 if not value.is_file():
                     raise TypeError(repr(value))
-            except TypeError:
-                logger.exception("Media.path must be a file: %s", repr(value))
-                raise
+        except TypeError:
+            logger.exception("Media.path must be a file: %s", repr(value))
+            raise
 
         self._path = value.resolve()
 
@@ -123,14 +125,15 @@ class Media:
         """Set the library property. Attempt to coerce the value to a Path if not
         provided as such."""
 
-        if not isinstance(value, pathlib.Path):
-            try:
+        try:
+            if not isinstance(value, pathlib.Path):
                 value = pathlib.Path(value)
-                if not value.is_dir():
-                    raise TypeError(repr(value))
-            except TypeError:
-                logger.exception("Media.library must be a directory: %s", repr(value))
-                raise
+
+            if not value.is_dir():
+                raise TypeError(repr(value))
+        except TypeError:
+            logger.exception("Media.library must be a directory: %s", repr(value))
+            raise
 
         self._library = value.resolve()
 
@@ -267,6 +270,8 @@ class Media:
         dest: pathlib.Path = self.path.with_stem(f"{self!s}")
         logger.info("Renaming %s → %s. Simulate: %s", self.path, dest, simulate)
 
+        # TODO: Raise an exception file destination conflicts
+        # TODO: Handle exception on the client side
         if dest.exists():
             if self.path.samefile(dest):
                 logger.info("File already named correctly.")
