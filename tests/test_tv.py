@@ -301,7 +301,7 @@ def tv_no_metadata(mocker) -> Callable[[str], nielsen.media.TV]:
 
     mock_exists: MockType = mocker.patch("pathlib.Path.exists")
     mock_exists.return_value = True
-    mock_is_file: MockType = mocker.patch("pathlib.Path.exists")
+    mock_is_file: MockType = mocker.patch("pathlib.Path.is_file")
     mock_is_file.return_value = True
 
     return __tv_factory
@@ -324,7 +324,7 @@ def tv_factory(mocker) -> Callable[[str, EpisodeMetadata], nielsen.media.TV]:
 
     mock_exists: MockType = mocker.patch("pathlib.Path.exists")
     mock_exists.return_value = True
-    mock_is_file: MockType = mocker.patch("pathlib.Path.exists")
+    mock_is_file: MockType = mocker.patch("pathlib.Path.is_file")
     mock_is_file.return_value = True
 
     return __tv_factory
@@ -393,12 +393,10 @@ def test_get_section(fixt, request) -> None:
 
 
 @pytest.mark.parametrize("filename, metadata", EPISODES)
-def test_infer(filename: str, metadata: EpisodeMetadata, tv_factory) -> None:
+def test_infer(filename: str, metadata: EpisodeMetadata, tv_no_metadata) -> None:
     """Test every pattern and difficult edge cases."""
 
-    tv: nielsen.media.TV = tv_factory(filename, {})
-    # Ensure we don't invalidate the test by having passed the metadata to the factory
-    assert tv.metadata != metadata
+    tv: nielsen.media.TV = tv_no_metadata(filename)
     tv.infer()
     assert tv.metadata == metadata, "Inferred metadata mismatch"
 
