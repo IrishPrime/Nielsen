@@ -21,7 +21,7 @@ license = "GPL-3.0-or-later"
 name = "nielsen"
 readme = "README.md"
 repository = "https://github.com/IrishPrime/Nielsen/"
-version = "3.1.1"
+version = "3.1.2"
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -44,7 +44,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 nielsen = "nielsen.bin.cli.main:main"
-pickler = "nielsen.bin.pickler:main"
 
 [tool.poetry.extras]
 rich = ["rich"]
