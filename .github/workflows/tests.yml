@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: poetry install --with dev
 
+      - name: Create dummy file for testing
+        run: touch fixtures/media.file
+
       - name: Run pytest
         run: |
           poetry run pytest --maxfail=3 --disable-warnings
