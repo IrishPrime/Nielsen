@@ -6,6 +6,10 @@ on:
     branches: [$default-branch]
   pull_request:
     branches: [$default-branch]
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: read
