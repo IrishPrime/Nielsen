@@ -51,7 +51,7 @@ jobs:
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report-${{ GITHUB_REF_NAME }}-${{ matrix.python-version }}
+          name: coverage-report-${{ env:GITHUB_REF_NAME }}-${{ matrix.python-version }}
           path: htmlcov
           if-no-files-found: ignore
           overwrite: true
