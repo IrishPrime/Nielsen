@@ -8,7 +8,6 @@ handles all changes to that Media instance."""
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Type
 import pathlib
 
 from nielsen.config import config
@@ -27,7 +26,7 @@ class Processor:
     construct instances of the given type. The `fetcher` is an instance of an object
     implementing the `Fetcher` Protocol."""
 
-    media_type: Type[nielsen.media.Media]
+    media_type: type[nielsen.media.Media]
     fetcher: nielsen.fetcher.Fetcher
 
     def process(self, path: pathlib.Path) -> nielsen.media.Media:
@@ -63,8 +62,8 @@ class ProcessorFactory:
     instance of this Factory will return a Processor with the given Media class and
     Fetcher instance."""
 
-    media_type: Type[nielsen.media.Media]
-    fetcher: Type[nielsen.fetcher.Fetcher]
+    media_type: type[nielsen.media.Media]
+    fetcher: type[nielsen.fetcher.Fetcher]
 
     def __call__(self) -> Processor:
         """Return a Processor for the given types."""
