@@ -4,7 +4,7 @@ import logging
 import urllib.parse
 from html.parser import HTMLParser
 from io import StringIO
-from typing import Any, Callable, Optional, Protocol, TypeVar
+from typing import Any, Callable, Optional, Protocol
 
 import requests
 
@@ -14,15 +14,12 @@ from nielsen.config import config
 logger: logging.Logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-# Define a generic Media type so the Fetcher Protocol will recognize Media subclasses
-MT = TypeVar("MT", bound=nielsen.media.Media, infer_variance=True)
-
 
 class Fetcher(Protocol):
     """Used to fetch metadata from an external source rather than infering it from the
     file name."""
 
-    def fetch(self, media: MT) -> None:
+    def fetch(self, media: nielsen.media.Media) -> None:
         """Fetch and update metadata using information from the given `Media` object."""
         ...
 
@@ -262,9 +259,9 @@ class TVMaze:
                     }
                 }:
                     logger.debug("Matched Network")
-                    name: str = name
-                    series_id: int = series_id
-                    premiered: str = premiered
+                    name = name
+                    series_id = series_id
+                    premiered = premiered
                     network: str = nw_name
                     country: str = (
                         nw_country.get("name", "Unknown") if nw_country else "Unknown"
@@ -280,11 +277,11 @@ class TVMaze:
                     }
                 }:
                     logger.debug("Matched Streaming")
-                    name: str = name
-                    series_id: int = series_id
-                    premiered: str = premiered
-                    network: str = wc_name
-                    country: str = (
+                    name = name
+                    series_id = series_id
+                    premiered = premiered
+                    network = wc_name
+                    country = (
                         wc_country.get("name", "Unknown") if wc_country else "Unknown"
                     )
 
@@ -297,22 +294,22 @@ class TVMaze:
                     }
                 }:
                     logger.debug("Matched Minimal")
-                    name: str = name
-                    series_id: int = series_id
-                    premiered: str = premiered
-                    network: str = "Unknown"
-                    country: str = "Unknown"
+                    name = name
+                    series_id = series_id
+                    premiered = premiered
+                    network = "Unknown"
+                    country = "Unknown"
 
                 # This should never happen
                 case _:
                     # NOTE: It may be better to simply skip these results.
                     logger.error("Unable to parse search result")
                     logger.debug(result)
-                    name: str = "Unknown"
-                    series_id: int = 0
-                    premiered: str = "Unknown"
-                    network: str = "Unknown"
-                    country: str = "Unknown"
+                    name = "Unknown"
+                    series_id = 0
+                    premiered = "Unknown"
+                    network = "Unknown"
+                    country = "Unknown"
 
             print(
                 f"{option}. {name} (Premiered: {premiered}, Network: {network}, Country: {country}, ID: {series_id})"
@@ -354,7 +351,7 @@ class TVMaze:
         pretty_episodes: list[str] = []
 
         for episode in data:
-            pretty_episodes.append(__class__.pretty_episode(episode))
+            pretty_episodes.append(TVMaze.pretty_episode(episode))
 
         return "\n\n".join(pretty_episodes)
 

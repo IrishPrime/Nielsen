@@ -79,7 +79,7 @@ def fetch(
 
     elif series_id and season:
         season_id: int = fetcher.get_season_id(series_id, season)
-        response: Response = fetcher.seasons_episodes(season_id)
+        response = fetcher.seasons_episodes(season_id)
         data = response.json()
 
         if raw:
@@ -88,7 +88,7 @@ def fetch(
             typer.echo(fetcher.pretty_season(data))
 
     elif series_id:
-        response: Response = fetcher.shows(series_id)
+        response = fetcher.shows(series_id)
         data = response.json()
 
         if raw:
@@ -150,7 +150,7 @@ def apply(
             raise typer.Exit(3)
 
         # Create a TV instance and attach metadata to it for the Fetcher to work with
-        media: nielsen.media.Media = nielsen.media.TV(
+        media: nielsen.media.TV = nielsen.media.TV(
             Path(files.pop()), series=series, season=season, episode=episode
         )
         fetcher.fetch(media)
@@ -163,9 +163,7 @@ def apply(
     episodes: list[dict[str, Any]] = response.json()
 
     for e, f in zip(episodes, files):
-        media: nielsen.media.Media = nielsen.media.TV(
-            Path(f), series=series, season=season
-        )
+        media = nielsen.media.TV(Path(f), series=series, season=season)
         typer.echo(
             f"Apply information from {series} Season {season} Episode {e['number']} to {media.path}"
         )
