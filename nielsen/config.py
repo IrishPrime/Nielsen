@@ -17,7 +17,7 @@ CONFIG_FILE_LOCATIONS: list[str | pathlib.Path] = [
 config: ConfigParser = ConfigParser(converters={"path": pathlib.Path})
 
 # Set default options
-config[config.default_section] = {
+config['nielsen'] = {
     # Dry Run - Outputs results without actually modifying files
     "simulate": "False",
     # Fetch - Whether to query remote sources for information
