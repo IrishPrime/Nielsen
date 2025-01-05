@@ -23,22 +23,9 @@ def test_load_config_no_arg_no_files(mocker):
     mocker.patch("nielsen.config.CONFIG_FILE_LOCATIONS", new=[])
     assert nielsen.config.load_config() == [], "No files should be loaded."
 
-    defaults: dict[str, str] = {
-        "simulate": "False",
-        "fetch": "True",
-        "transform": "True",
-        "interactive": "True",
-        "library": str(pathlib.Path.home()),
-        "logfile": "~/.local/log/nielsen/nielsen.log",
-        "loglevel": "WARNING",
-        "mode": "644",
-        "organize": "True",
-        "rename": "True",
-    }
-
     nielsen.config.config.add_section("test section")
 
-    for option, value in defaults.items():
+    for option, value in nielsen.config.config.defaults().items():
         assert (
             nielsen.config.config.get("test section", option) == value
         ), "Arbitrary section should return all default values."

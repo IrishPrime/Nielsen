@@ -35,7 +35,7 @@ class TVMaze:
         record the series ID in the config."""
 
         series_id: Optional[int] = self.get_series_id(
-            media.series, config.getboolean("DEFAULT", "interactive")
+            media.series, config.getboolean("nielsen", "interactive")
         )
 
         if not series_id:

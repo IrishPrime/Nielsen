@@ -14,7 +14,9 @@ CONFIG_FILE_LOCATIONS: list[str | pathlib.Path] = [
 ]
 
 # Add a getpath converter.
-config: ConfigParser = ConfigParser(converters={"path": pathlib.Path})
+config: ConfigParser = ConfigParser(
+    converters={"path": pathlib.Path}, default_section="nielsen"
+)
 
 # Set default options
 config[config.default_section] = {
