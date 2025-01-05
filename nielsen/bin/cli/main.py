@@ -26,7 +26,7 @@ logging.basicConfig(
 )
 
 
-app: typer.Typer = typer.Typer()
+app: typer.Typer = typer.Typer(no_args_is_help=True)
 
 app.add_typer(
     nielsen.bin.cli.config.app,
