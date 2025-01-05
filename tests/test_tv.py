@@ -615,6 +615,7 @@ def test_transform(
     variant: str,
     tv_factory: Callable[[str, EpisodeMetadata], nielsen.media.TV],
     config: ConfigParser,
+    mocker: MockerFixture,
 ) -> None:
     """Transform series names based on values from the tv/series/transform config section."""
 
@@ -627,6 +628,11 @@ def test_transform(
     config.add_section("tv/transform/series")
     expected: str = "Agents of SHIELD"
     config.set("tv/transform/series", variant, expected)
+
+    # Mock is_dir to ensure the library setter succeeds even when we don't know what the
+    # filesystem tree actually looks like in automated test environments.
+    mock_is_dir: MockType = mocker.patch("pathlib.Path.is_dir")
+    mock_is_dir.return_value = True
 
     shield: nielsen.media.Media = tv_factory(
         "shield.mkv", {"series": variant, "season": 1, "episode": 1, "title": ""}
