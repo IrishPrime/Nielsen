@@ -23,11 +23,9 @@ def test_load_config_no_arg_no_files(mocker):
     mocker.patch("nielsen.config.CONFIG_FILE_LOCATIONS", new=[])
     assert nielsen.config.load_config() == [], "No files should be loaded."
 
-    nielsen.config.config.add_section("test section")
-
     for option, value in nielsen.config.config.defaults().items():
         assert (
-            nielsen.config.config.get("test section", option) == value
+            nielsen.config.config.get("nielsen", option) == value
         ), "Arbitrary section should return all default values."
 
 
