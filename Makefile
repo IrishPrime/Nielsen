@@ -12,10 +12,10 @@ pickle:
 	./bin/pickler.py
 
 sdist: nielsen/*.py pyproject.toml README.md
-	poetry build --format=sdist
+	uv build --sdist
 
 wheel: nielsen/*.py pyproject.toml README.md
-	poetry build --format=wheel
+	uv build --wheel
 
 # Install and source the completion script for zsh
 zsh:

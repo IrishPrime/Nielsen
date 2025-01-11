@@ -13,7 +13,7 @@ your media directories tidy.
 ## Requirements
 
 - Python 3.12 (or newer)
-- [Poetry][poetry] (for source installations)
+- [uv][uv] (for source installations)
 
 ## Install
 
@@ -29,10 +29,12 @@ pip install nielsen
 ### Source
 
 This package can also be installed from source by cloning this repository and
-using [Poetry][poetry].
+using [uv][uv].
 
 ```bash
-poetry install
+uv sync
+# Optionally, install the dev dependencies if you wish modify the package
+uv sync --all-extras --dev
 ```
 
 ## Concepts
@@ -323,10 +325,10 @@ to do the same lookup again in the future.
 *Values*: `Series Name = Series ID`
 
 [architecture]: ARCHITECTURE.md
-[poetry]: https://python-poetry.org/
 [pypi-nielsen]: https://pypi.org/project/Nielsen/
 [python-logging]: https://docs.python.org/3/library/logging.html#logging-levels
 [tvmaze-agents-of-shield]: https://www.tvmaze.com/shows/31/marvels-agents-of-shield
 [tvmaze]: https://tvmaze.com/
+[uv]: https://docs.astral.sh/uv/
 [wikipedia-fs-mode]: https://en.wikipedia.org/wiki/File-system_permissions#Numeric_notation
 [wikipedia-ini]: https://en.wikipedia.org/wiki/INI_file

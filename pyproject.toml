@@ -1,5 +1,7 @@
-[tool.poetry]
-authors = ["Michael \"Irish\" O'Neill <irish.dot@gmail.com>"]
+[project]
+authors = [
+    { name = "Michael \"Irish\" O'Neill", email = "irish.dot@gmail.com" }
+]
 classifiers = [
 	'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
 	'Operating System :: POSIX :: Linux',
@@ -13,6 +15,10 @@ classifiers = [
 	'Topic :: Utilities',
 	'Typing :: Typed',
 ]
+dependencies = [
+    "requests>=2.32.3",
+    "typer>=0.15.1",
+]
 description = "Organize your digital media collections."
 documentation = "https://github.com/IrishPrime/Nielsen/wiki"
 homepage = "http://irishprime.github.io/Nielsen/"
@@ -21,31 +27,25 @@ license = "GPL-3.0-or-later"
 name = "nielsen"
 readme = "README.md"
 repository = "https://github.com/IrishPrime/Nielsen/"
-version = "3.1.5"
-
-[tool.poetry.dependencies]
-python = "^3.12"
-requests = "^2.0"
-rich = "^13.3.3"
-typer = "^0.9.0"
-
-[tool.poetry.group.dev.dependencies]
-coverage = "^7.0"
-mypy = "^1.0"
-pytest = "^8.0"
-pytest-cov = "^5.0.0"
-pytest-mock = "^3.14.0"
-types-requests = "^2.0"
+requires-python = ">=3.12"
+version = "3.1.6"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry.scripts]
+[dependency-groups]
+dev = [
+    "coverage>=7.6.10",
+    "mypy>=1.14.1",
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "types-requests>=2.32.0.20241016",
+]
+
+[project.scripts]
 nielsen = "nielsen.bin.cli.main:main"
-
-[tool.poetry.extras]
-rich = ["rich"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --import-mode=importlib --cov=nielsen --cov-report=html --cov-report=term"
