@@ -21,23 +21,22 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version:
+          - "3.12"
+          - "3.13"
 
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Install poetry
-        run: pipx install poetry
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'poetry'
+          enable-cache: true
 
-      - name: Install dependencies
-        run: poetry install --with dev
+      - name: Install project
+        run: uv sync --all-extras --dev
 
       - name: Create dummy files for testing
         run: |
@@ -46,7 +45,7 @@ jobs:
 
       - name: Run pytest
         run: |
-          poetry run pytest --maxfail=3 --disable-warnings
+          uv run pytest --maxfail=3 --disable-warnings
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
