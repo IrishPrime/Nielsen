@@ -55,7 +55,11 @@ addopts = "-ra --import-mode=importlib --cov=nielsen --cov-report=html --cov-rep
 
 [tool.coverage.run]
 branch = true
+dynamic_context = "test_function"
 parallel = true
+
+[tool.coverage.html]
+show_contexts = true
 
 [tool.coverage.report]
 show_missing = true
