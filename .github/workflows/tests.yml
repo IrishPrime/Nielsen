@@ -28,10 +28,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install uv and Python
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
@@ -45,7 +45,7 @@ jobs:
           uv run pytest --maxfail=3 --disable-warnings
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report-${{ matrix.python-version }}
           path: htmlcov
