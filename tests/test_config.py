@@ -9,11 +9,13 @@ import nielsen.config
 
 
 @pytest.fixture
-def config_file() -> pathlib.Path:
+def config_file(tmp_path: pathlib.Path) -> pathlib.Path:
     """Return a Path object representing the location of the configuration file to be
     used with tests."""
 
-    return pathlib.Path("fixtures/config.ini")
+    config_file: pathlib.Path = tmp_path / "config.ini"
+    config_file.write_text("[unit tests]\nfoo = bar\n")
+    return config_file
 
 
 def test_load_config_no_arg_no_files(mocker):
@@ -33,7 +35,7 @@ def test_load_config_specific_file(config_file):
     """Load config from a specific file."""
 
     files: list[str] = nielsen.config.load_config(config_file)
-    assert files == ["fixtures/config.ini"]
+    assert files == [str(config_file)]
 
     assert nielsen.config.config.has_section(
         "unit tests"
@@ -42,20 +44,20 @@ def test_load_config_specific_file(config_file):
     assert nielsen.config.config.get("unit tests", "foo") == "bar"
 
 
-def test_load_config_missing_file(caplog):
+def test_load_config_missing_file(caplog, tmp_path: pathlib.Path):
     """Specify a missing configuration file to load."""
 
-    file: pathlib.Path = pathlib.Path("fixtures/missing.ini")
+    file: pathlib.Path = tmp_path / "missing.ini"
     nielsen.config.load_config(file)
     assert f"Failed to load configuration from: {file}" in caplog.text
 
 
-def test_write_config(mocker):
+def test_write_config(mocker, tmp_path: pathlib.Path):
     """Write the config to a file."""
 
     # This function just calls the ConfigParser.write() method, so there's not much
     # for us to test. Ensure our function writes data to the specified file.
-    file: pathlib.Path = pathlib.Path("fixtures/write-test.ini")
+    file: pathlib.Path = tmp_path / "write-test.ini"
     mock_open: MockType = mocker.patch("builtins.open")
     mock_write: MockType = mocker.patch("configparser.ConfigParser.write")
 
