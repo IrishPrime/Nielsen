@@ -12,17 +12,17 @@ import nielsen.media
 
 
 @pytest.fixture
-def good_path() -> nielsen.media.Media:
+def good_path(media_file: pathlib.Path) -> nielsen.media.Media:
     """Return a Media object with a valid file path."""
 
-    return nielsen.media.Media(pathlib.Path("fixtures/media.file"))
+    return nielsen.media.Media(media_file)
 
 
 @pytest.fixture
-def missing_file() -> nielsen.media.Media:
+def missing_media(missing_file: pathlib.Path) -> nielsen.media.Media:
     """Return a Media object with no file at the specified path."""
 
-    return nielsen.media.Media(pathlib.Path("fixtures/media/missing.file"))
+    return nielsen.media.Media(missing_file)
 
 
 @pytest.fixture
@@ -33,10 +33,10 @@ def non_file_path() -> nielsen.media.Media:
 
 
 @pytest.fixture
-def medias(good_path, missing_file, non_file_path) -> list[nielsen.media.Media]:
+def medias(good_path, missing_media, non_file_path) -> list[nielsen.media.Media]:
     return [
         good_path,
-        missing_file,
+        missing_media,
         non_file_path,
     ]
 
@@ -76,7 +76,7 @@ def test_match_no_match(good_path) -> None:
     assert good_path._match() == {}, "Return an empty dictionary."
 
 
-def test_get_library(good_path) -> None:
+def test_get_library(good_path, media_library: pathlib.Path) -> None:
     """Get the library property from the appropriate config section."""
 
     # Calling resolve on the Path we compare to also ensures the library property is
@@ -84,9 +84,9 @@ def test_get_library(good_path) -> None:
     assert (
         good_path.library == nielsen.config.config.getpath("media", "library").resolve()  # type: ignore
     ), "Should match option from tv section of config."
-    assert (
-        good_path.library == pathlib.Path("fixtures/media/").resolve()
-    ), "Should match known type-specific value."
+    assert good_path.library == media_library.resolve(), (
+        "Should match known type-specific value."
+    )
 
 
 def test_get_metadata(good_path) -> None:
@@ -233,15 +233,16 @@ def test_set_section(non_file_path) -> None:
 
 
 @pytest.mark.parametrize(
-    "location",
+    "as_string",
     [
-        pytest.param("fixtures/media/", id="string"),
-        pytest.param(pathlib.Path("fixtures/media/"), id="path"),
+        pytest.param(True, id="string"),
+        pytest.param(False, id="path"),
     ],
 )
-def test_set_library(good_path, location) -> None:
+def test_set_library(good_path, media_library: pathlib.Path, as_string: bool) -> None:
     """Set the library property to valid paths."""
 
+    location: str | pathlib.Path = str(media_library) if as_string else media_library
     good_path.library = location
     assert isinstance(good_path.library, pathlib.Path)
     assert good_path.library.is_dir()
@@ -265,16 +266,17 @@ def test_set_library_invalid(good_path, location) -> None:
 
 
 @pytest.mark.parametrize(
-    "path",
+    "as_string",
     [
-        pytest.param("fixtures/media.file", id="string"),
-        pytest.param(pathlib.Path("fixtures/media.file"), id="path"),
+        pytest.param(True, id="string"),
+        pytest.param(False, id="path"),
     ],
 )
-def test_set_path(path) -> None:
+def test_set_path(media_file: pathlib.Path, as_string: bool) -> None:
     """Set the path property of a Media object."""
 
-    media: nielsen.media.Media = nielsen.media.Media(path)
+    path: str | pathlib.Path = str(media_file) if as_string else media_file
+    media: nielsen.media.Media = nielsen.media.Media(path)  # type: ignore[arg-type]
     assert isinstance(media.path, pathlib.Path)
     assert media.path.is_file()
 

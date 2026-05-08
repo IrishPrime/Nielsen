@@ -2,13 +2,14 @@
 
 import logging
 import pathlib
+from collections.abc import Callable
 from configparser import ConfigParser
-from typing import Any, Callable, Pattern, TypedDict
+from re import Pattern
+from typing import Any, TypedDict
 
 import pytest
 from pytest_mock import MockerFixture, MockType
 
-import nielsen.config
 import nielsen.media
 
 
@@ -350,12 +351,10 @@ def test_get_metadata(fixt, request) -> None:
     }
 
 
-def test_get_orgdir(tv_all_data) -> None:
+def test_get_orgdir(tv_all_data, tv_library: pathlib.Path) -> None:
     """The orgdir should be the library, series name, then season."""
 
-    assert (
-        tv_all_data.orgdir == pathlib.Path("fixtures/tv/Ted Lasso/Season 01/").resolve()
-    )
+    assert tv_all_data.orgdir == tv_library / "Ted Lasso" / "Season 01"
 
 
 @pytest.mark.parametrize(
@@ -433,12 +432,17 @@ def test_rename_success(
     simulate: str,
     tv_good_metadata: nielsen.media.TV,
     config: ConfigParser,
+    tmp_path: pathlib.Path,
 ) -> None:
     """Successfully rename a file without moving it to a different directory."""
 
     # Set simulation, which controls whether the file is actually renamed, or the the
     # new path is returned without renaming
     config.set("nielsen", "simulate", simulate)
+
+    # Relocate the path under tmp_path so the touch/rename below operates on a real
+    # disk path that pytest will clean up rather than polluting fixtures/.
+    tv_good_metadata.path = tmp_path / tv_good_metadata.path.name
 
     # Ensure the source exists and the destination does not
     tv_good_metadata.path.touch(exist_ok=True)
@@ -485,7 +489,9 @@ def test_rename_file_exists(
     assert "File already named correctly." in caplog.text
 
 
-def test_organize_success(tv_factory, mocker: MockerFixture) -> None:
+def test_organize_success(
+    tv_factory, mocker: MockerFixture, tv_library: pathlib.Path
+) -> None:
     """Organize file, set and return new path."""
 
     # Mock the existence of the file on disk to avoid creating and removing
@@ -500,8 +506,8 @@ def test_organize_success(tv_factory, mocker: MockerFixture) -> None:
     # shutil.move moves a file and returns the destination path passed as an
     # argument. Mock it by just returning the input argument.
     mock_move.side_effect = lambda _, org: org
-    filename: str = "fixtures/tv/Ted Lasso -01.03- Trent Crimm: The Independent.mkv"
-    destination: str = "fixtures/tv/Ted Lasso/Season 01/Ted Lasso -01.03- Trent Crimm: The Independent.mkv"
+    filename: str = "Ted Lasso -01.03- Trent Crimm: The Independent.mkv"
+    destination: pathlib.Path = tv_library / "Ted Lasso" / "Season 01" / filename
 
     tv: nielsen.media.TV = tv_factory(
         filename,
@@ -513,7 +519,7 @@ def test_organize_success(tv_factory, mocker: MockerFixture) -> None:
         },
     )
 
-    assert tv.organize() == (pathlib.Path(destination).resolve())
+    assert tv.organize() == destination
 
     # The pathlib.Path.chmod and shutil.chown functions can be assumed to work properly,
     # we just need to assert that they were called with the correct values.
@@ -555,9 +561,9 @@ def test_str(tv_good_metadata: nielsen.media.TV) -> None:
 
     expected: str = "Ted Lasso -01.03- Trent Crimm: The Independent"
 
-    assert (
-        str(tv_good_metadata) == expected
-    ), "String representation should match display format"
+    assert str(tv_good_metadata) == expected, (
+        "String representation should match display format"
+    )
 
 
 def test_str_no_metadata(tv_no_metadata: Callable[[str], nielsen.media.TV]) -> None:
