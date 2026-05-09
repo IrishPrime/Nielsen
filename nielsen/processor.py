@@ -6,13 +6,14 @@ instance and manually calling all of their individual methods, Processors provid
 convenience method (process) which creates a Media instance of the desired type and
 handles all changes to that Media instance."""
 
+import pathlib
 from dataclasses import dataclass
 from enum import Enum
-import pathlib
+from typing import Any
 
-from nielsen.config import config
 import nielsen.fetcher
 import nielsen.media
+from nielsen.config import config
 
 
 class MediaType(str, Enum):
@@ -20,16 +21,16 @@ class MediaType(str, Enum):
 
 
 @dataclass
-class Processor:
+class Processor[M: nielsen.media.Media]:
     """A convenience class to handle all the Media and Fetcher operations required to
     manage an individual file. The `media_type` is a Media class and is used to
     construct instances of the given type. The `fetcher` is an instance of an object
     implementing the `Fetcher` Protocol."""
 
-    media_type: type[nielsen.media.Media]
-    fetcher: nielsen.fetcher.Fetcher
+    media_type: type[M]
+    fetcher: nielsen.fetcher.Fetcher[M]
 
-    def process(self, path: pathlib.Path) -> nielsen.media.Media:
+    def process(self, path: pathlib.Path) -> M:
         """Convenience function to process Media for storage in its library, respecting the configuration
         options (so some steps may be skipped).
         1. Infer metadata based on the Media type.
@@ -40,7 +41,7 @@ class Processor:
         """
 
         # Create an instance of the appropriate Media subclass
-        media: nielsen.media.Media = self.media_type(path)
+        media: M = self.media_type(path)
 
         media.infer()
 
@@ -57,20 +58,20 @@ class Processor:
 
 
 @dataclass
-class ProcessorFactory:
+class ProcessorFactory[M: nielsen.media.Media]:
     """A Factory class for Processors. Given a Media and Fetcher class, calling an
     instance of this Factory will return a Processor with the given Media class and
     Fetcher instance."""
 
-    media_type: type[nielsen.media.Media]
-    fetcher: type[nielsen.fetcher.Fetcher]
+    media_type: type[M]
+    fetcher: type[nielsen.fetcher.Fetcher[M]]
 
-    def __call__(self) -> Processor:
+    def __call__(self) -> Processor[M]:
         """Return a Processor for the given types."""
 
         return Processor(self.media_type, self.fetcher())
 
 
-PROCESSOR_FACTORIES: dict[MediaType, ProcessorFactory] = {
+PROCESSOR_FACTORIES: dict[MediaType, ProcessorFactory[Any]] = {
     MediaType.TV: ProcessorFactory(nielsen.media.TV, nielsen.fetcher.TVMaze),
 }
