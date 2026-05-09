@@ -15,11 +15,11 @@ logger: logging.Logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-class Fetcher(Protocol):
+class Fetcher[M: nielsen.media.Media](Protocol):
     """Used to fetch metadata from an external source rather than infering it from the
     file name."""
 
-    def fetch(self, media: nielsen.media.Media) -> None:
+    def fetch(self, media: M) -> None:
         """Fetch and update metadata using information from the given `Media` object."""
         ...
 
