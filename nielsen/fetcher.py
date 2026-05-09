@@ -5,7 +5,7 @@ import urllib.parse
 from collections.abc import Callable
 from html.parser import HTMLParser
 from io import StringIO
-from typing import Any, Protocol
+from typing import Any, Protocol, TypedDict
 
 import requests
 
@@ -14,6 +14,43 @@ from nielsen.config import config
 
 logger: logging.Logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+
+class WebChannel(TypedDict, total=False):
+    id: int
+    name: str
+    country: dict[str, Any] | None
+    officialSite: str
+
+
+class Image(TypedDict, total=False):
+    medium: str
+    original: str
+
+
+class Show(TypedDict, total=False):
+    id: int
+    name: str
+    premiered: str | None
+    network: dict[str, Any] | None
+    webChannel: WebChannel | None
+    image: Image | None
+    summary: str | None
+
+
+class Season(TypedDict, total=False):
+    id: int
+    url: str
+    number: int
+    name: str
+    episodeOrder: int
+    premiereDate: str | None
+    endDate: str | None
+    network: dict[str, Any] | None
+    webChannel: WebChannel | None
+    image: Image | None
+    summary: str | None
+    _links: dict[str, Any]
 
 
 class Fetcher[M: nielsen.media.Media](Protocol):
