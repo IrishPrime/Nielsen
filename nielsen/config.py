@@ -3,7 +3,6 @@
 import logging
 import pathlib
 from configparser import ConfigParser
-from typing import Optional
 
 logger: logging.Logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -43,12 +42,11 @@ config[config.default_section] = {
 }
 
 
-def load_config(path: Optional[pathlib.Path] = None) -> list[str]:
+def load_config(path: pathlib.Path | None = None) -> list[str]:
     """Load a configuration from a file into the global configuration object. If no file
     path is provided, default configuration file locations are used. Returns a list of
     files loaded."""
 
-    global config
     files: list[str]
 
     if not path:
@@ -66,8 +64,6 @@ def load_config(path: Optional[pathlib.Path] = None) -> list[str]:
 
 def write_config(path: pathlib.Path) -> None:
     """Write the global configuration object to the given `path`."""
-
-    global config
 
     with open(path, mode="w") as file:
         config.write(file)
