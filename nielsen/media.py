@@ -26,7 +26,7 @@ import re
 from dataclasses import dataclass, field
 from shutil import chown, move
 from string import capwords
-from typing import Any, Pattern
+from typing import Any
 
 from nielsen.config import config
 
@@ -38,7 +38,7 @@ logger.addHandler(logging.NullHandler())
 class Media:
     """Media objects represent a file to be managed and its metadata."""
 
-    patterns: list[Pattern] = field(
+    patterns: list[re.Pattern[str]] = field(
         default_factory=list,
         init=False,
         repr=False,
@@ -104,7 +104,7 @@ class Media:
             if not isinstance(value, pathlib.Path):
                 value = pathlib.Path(value)
 
-                # TODO Do not allow non-files
+                # TODO: Do not allow non-files
                 if not value.is_file():
                     raise TypeError(repr(value))
         except TypeError:
@@ -381,7 +381,7 @@ class TV(Media):
         self.episode = int(metadata.get("episode", 0))
         self.title = metadata.get("title", "").replace(".", " ").strip()
 
-        tags: re.Pattern = re.compile(
+        tags: re.Pattern[str] = re.compile(
             r"\(?(1080p|720p|HDTV|WEB|PROPER|REPACK|RERIP)\)?.*", re.IGNORECASE
         )
         # Use string.capwords() rather than str.title() to properly handle letters after apostrophes.
