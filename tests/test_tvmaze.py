@@ -6,7 +6,6 @@ import pytest
 from pytest_mock import MockerFixture, MockType
 from requests.models import Response
 
-import nielsen.config
 import nielsen.fetcher
 import nielsen.media
 
@@ -57,10 +56,10 @@ def mock_tv(mocker: MockerFixture) -> MockType:
 @pytest.fixture
 def response_factory(
     mocker: MockerFixture,
-) -> Callable[[str, bool, dict | list[dict]], MockType]:
+) -> Callable[[str, bool, dict[str, Any] | list[dict[str, Any]]], MockType]:
     """Return a MagicMock specced for a requests.Response instance."""
 
-    def __response_factory(url: str, ok: bool, data: dict | list[dict]) -> MockType:
+    def __response_factory(url: str, ok: bool, data: dict[str, Any] | list[dict[str, Any]]) -> MockType:
         mock_response: MockType = mocker.MagicMock(spec=Response)
         mock_response.url = url
         mock_response.ok.return_value = ok
@@ -72,7 +71,7 @@ def response_factory(
 
 
 @pytest.fixture
-def search_shows_agents_of_shield() -> list[dict]:
+def search_shows_agents_of_shield() -> list[dict[str, Any]]:
     """Return the JSON results of https://api.tvmaze.com/search/shows?q=Agents+of+SHIELD"""
 
     return [
@@ -264,7 +263,7 @@ def search_shows_agents_of_shield() -> list[dict]:
 
 
 @pytest.fixture
-def search_shows_ted_lasso() -> list[dict]:
+def search_shows_ted_lasso() -> list[dict[str, Any]]:
     """Return the JSON results from https://api.tvmaze.com/search/shows?q=Ted+Lasso"""
 
     return [
@@ -314,14 +313,14 @@ def search_shows_ted_lasso() -> list[dict]:
 
 
 @pytest.fixture
-def search_shows_useless() -> list[dict]:
+def search_shows_useless() -> list[dict[str, Any]]:
     """Return the JSON results of https://api.tvmaze.com/search/shows?q=useless+search+string"""
 
     return []
 
 
 @pytest.fixture
-def seasons_episodes_ted_lasso_s2() -> list[dict]:
+def seasons_episodes_ted_lasso_s2() -> list[dict[str, Any]]:
     """Return the JSON results of https://api.tvmaze.com/seasons/112939/episodes"""
 
     return [
@@ -629,7 +628,7 @@ def seasons_episodes_ted_lasso_s2() -> list[dict]:
 
 
 @pytest.fixture
-def shows_episodebynumber_ted_lasso_s1_e3() -> dict:
+def shows_episodebynumber_ted_lasso_s1_e3() -> dict[str, Any]:
     """Return the JSON results of https://api.tvmaze.com/shows/44458/episodebynumber?season=1&number=3"""
 
     return {
@@ -657,7 +656,7 @@ def shows_episodebynumber_ted_lasso_s1_e3() -> dict:
 
 
 @pytest.fixture
-def shows_seasons_ted_lasso() -> list[dict]:
+def shows_seasons_ted_lasso() -> list[dict[str, Any]]:
     """Return JSON results of https://api.tvmaze.com/shows/44458/seasons"""
 
     return [
@@ -750,7 +749,7 @@ def shows_seasons_ted_lasso() -> list[dict]:
 
 
 @pytest.fixture
-def singlesearch_shows_ted_lasso() -> dict:
+def singlesearch_shows_ted_lasso() -> dict[str, Any]:
     """Return the JSON results of https://api.tvmaze.com/singlesearch/shows?q=Ted+Lasso"""
 
     return {
@@ -802,9 +801,9 @@ def test_get_series_id_local(
     # Use a Spy to assert the right function was called by get_series_id.
     id_local = mocker.spy(nielsen.fetcher.TVMaze, "get_series_id_local")
 
-    assert (
-        fetcher.get_series_id("Ted Lasso") == ted_lasso_series_id
-    ), "Should get ID from config file"
+    assert fetcher.get_series_id("Ted Lasso") == ted_lasso_series_id, (
+        "Should get ID from config file"
+    )
 
     id_local.assert_called_with(fetcher, "Ted Lasso")
 
@@ -815,7 +814,7 @@ def test_get_series_id_remote_single(
     ted_lasso_series_id: int,
     mock_get: MockType,
     response_factory: MockType,
-    singlesearch_shows_ted_lasso: dict,
+    singlesearch_shows_ted_lasso: dict[str, Any],
     mocker: MockerFixture,
 ) -> None:
     """Get series ID from TVMaze API with single result."""
@@ -834,9 +833,9 @@ def test_get_series_id_remote_single(
     )
 
     mock_get.return_value = resp_ok
-    assert (
-        fetcher.get_series_id("Ted Lasso") == ted_lasso_series_id
-    ), "Should get ID from TVMaze response"
+    assert fetcher.get_series_id("Ted Lasso") == ted_lasso_series_id, (
+        "Should get ID from TVMaze response"
+    )
 
     id_singlesearch.assert_called_once_with(fetcher, "Ted Lasso")
     id_singlesearch.reset_mock()
@@ -848,9 +847,9 @@ def test_get_series_id_remote_single(
 
     mock_get.return_value = resp_not_ok
 
-    assert (
-        fetcher.get_series_id_singlesearch("Useless Search String") == 0
-    ), "Should return 0 on a 'not ok' TVMaze response"
+    assert fetcher.get_series_id_singlesearch("Useless Search String") == 0, (
+        "Should return 0 on a 'not ok' TVMaze response"
+    )
     id_singlesearch.assert_called_once_with(fetcher, "Useless Search String")
 
 
@@ -913,9 +912,9 @@ def test_get_series_id_remote_multiple(
     # Always choose the first result
     mock_input.return_value = "1"
 
-    assert (
-        fetcher.get_series_id(series=mock_tv.series, interactive=True) == series_id
-    ), "Should get ID from TVMaze response"
+    assert fetcher.get_series_id(series=mock_tv.series, interactive=True) == series_id, (
+        "Should get ID from TVMaze response"
+    )
 
     id_search.assert_called_with(fetcher, mock_tv.series)
 
@@ -924,7 +923,7 @@ def test_get_episode_title(
     fetcher: nielsen.fetcher.TVMaze,
     mock_get: MockType,
     response_factory: MockType,
-    shows_episodebynumber_ted_lasso_s1_e3: dict,
+    shows_episodebynumber_ted_lasso_s1_e3: dict[str, Any],
     mocker: MockerFixture,
 ) -> None:
     """Get the episode title for a given series, season, and episode number."""
@@ -991,7 +990,7 @@ def test_fetch(
     mock_get: MockType,
     mocker: MockerFixture,
     response_factory: MockType,
-    shows_episodebynumber_ted_lasso_s1_e3: dict,
+    shows_episodebynumber_ted_lasso_s1_e3: dict[str, Any],
 ) -> None:
     """Fetch and update metadata using information from the given `Media` object."""
 
@@ -1010,9 +1009,9 @@ def test_fetch(
 
     assert tv.title == ""
     fetcher.fetch(tv)
-    assert (
-        tv.title == "Trent Crimm: The Independent"
-    ), "Title should be correctly set after fetching."
+    assert tv.title == "Trent Crimm: The Independent", (
+        "Title should be correctly set after fetching."
+    )
 
 
 def test_fetch_no_series_id(
@@ -1033,7 +1032,7 @@ def test_get_season_id(
     fetcher: nielsen.fetcher.TVMaze,
     mock_get: MockType,
     response_factory: MockType,
-    shows_seasons_ted_lasso: list[dict],
+    shows_seasons_ted_lasso: list[dict[str, Any]],
     ted_lasso_season2_id: int,
     ted_lasso_series_id: int,
 ) -> None:
@@ -1068,7 +1067,7 @@ def test_episodebynumber(
     fetcher: nielsen.fetcher.TVMaze,
     mock_get: MockType,
     response_factory: MockType,
-    shows_episodebynumber_ted_lasso_s1_e3: dict,
+    shows_episodebynumber_ted_lasso_s1_e3: dict[str, Any],
     ted_lasso_series_id: int,
 ) -> None:
     """Verify the GET request and response handling."""
@@ -1096,7 +1095,7 @@ def test_seasons_episodes(
     fetcher: nielsen.fetcher.TVMaze,
     mock_get: MockType,
     response_factory: MockType,
-    seasons_episodes_ted_lasso_s2: list[dict],
+    seasons_episodes_ted_lasso_s2: list[dict[str, Any]],
     ted_lasso_season2_id: int,
 ) -> None:
     """Verify the GET request and response handling."""
