@@ -2,9 +2,10 @@
 
 import logging
 import urllib.parse
+from collections.abc import Callable
 from html.parser import HTMLParser
 from io import StringIO
-from typing import Any, Callable, Optional, Protocol
+from typing import Any, Protocol
 
 import requests
 
@@ -34,7 +35,7 @@ class TVMaze:
         """Fetch metadata from TVMaze, update the metadata of the provided Media object,
         record the series ID in the config."""
 
-        series_id: Optional[int] = self.get_series_id(
+        series_id: int | None = self.get_series_id(
             media.series, config.getboolean("nielsen", "interactive")
         )
 
@@ -133,7 +134,7 @@ class TVMaze:
         URL: /shows/:id/episodebynumber?season=:season&number=:number.
         """
 
-        series_id: Optional[int] = self.get_series_id(media.series)
+        series_id: int | None = self.get_series_id(media.series)
         episode_title: str = ""
 
         if not series_id:
@@ -176,9 +177,9 @@ class TVMaze:
         request: str = (
             f"{self.SERVICE}/search/shows/?q={urllib.parse.quote_plus(series)}"
         )
-        logging.debug("Series: %s\nRequest: %r", series, request)
+        logger.debug("Series: %s\nRequest: %r", series, request)
         response: requests.Response = requests.get(request)
-        logging.debug(response)
+        logger.debug(response)
 
         return response
 
@@ -259,9 +260,6 @@ class TVMaze:
                     }
                 }:
                     logger.debug("Matched Network")
-                    name = name
-                    series_id = series_id
-                    premiered = premiered
                     network: str = nw_name
                     country: str = (
                         nw_country.get("name", "Unknown") if nw_country else "Unknown"
@@ -277,9 +275,6 @@ class TVMaze:
                     }
                 }:
                     logger.debug("Matched Streaming")
-                    name = name
-                    series_id = series_id
-                    premiered = premiered
                     network = wc_name
                     country = (
                         wc_country.get("name", "Unknown") if wc_country else "Unknown"
@@ -294,9 +289,6 @@ class TVMaze:
                     }
                 }:
                     logger.debug("Matched Minimal")
-                    name = name
-                    series_id = series_id
-                    premiered = premiered
                     network = "Unknown"
                     country = "Unknown"
 
@@ -331,13 +323,11 @@ class TVMaze:
         This is intended to work with the results of the TVMaze `/shows/:id`
         endpoint."""
 
-        return "\n".join(
-            (
-                f"{data['name']} - ID: {data['id']} - {data['url']}",
-                f"Premiered: {data['premiered']} - Status: {data['status']}",
-                f"{strip_tags(data['summary'])}",
-            )
-        )
+        return "\n".join((
+            f"{data['name']} - ID: {data['id']} - {data['url']}",
+            f"Premiered: {data['premiered']} - Status: {data['status']}",
+            f"{strip_tags(data['summary'])}",
+        ))
 
     @staticmethod
     def pretty_season(data: list[dict[str, Any]]) -> str:
@@ -364,13 +354,11 @@ class TVMaze:
         This is intended to work with the results of the TVMaze `/seasons/:id/episodes`
         and `/shows/:id/episodebynumber?season=:season&number=:number` endpoints."""
 
-        return "\n".join(
-            (
-                f"{data['season']}x{data['number']} - {data["name"]}",
-                f"{data['url']}",
-                f"{strip_tags(data['summary'])}",
-            )
-        )
+        return "\n".join((
+            f"{data['season']}x{data['number']} - {data['name']}",
+            f"{data['url']}",
+            f"{strip_tags(data['summary'])}",
+        ))
 
 
 class MLStripper(HTMLParser):
