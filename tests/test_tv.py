@@ -574,7 +574,7 @@ def test_str_no_metadata(tv_no_metadata: Callable[[str], nielsen.media.TV]) -> N
     assert (
         str(tv_no_metadata("Ted Lasso -01.03- Trent Crimm: The Independent.mkv"))
         == expected
-    ), "TV object with no metadata, but good filename"
+    ), ("TV object with no metadata, but good filename")
 
 
 def test_transform_no_section(
